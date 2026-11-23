@@ -14,6 +14,13 @@ Each platform goes through the 14 posts in order, then starts over, so the same
 post comes back after 2 weeks (Facebook, Threads) or about 4½ weeks
 (LinkedIn, Instagram). The first posts go out on Monday 9 November 2026.
 
+Every **3 days** Facebook, Threads and LinkedIn also share the next TikTok video
+from [videos.json](videos.json), so those days get two posts there. TikTok's API
+can't repost a video, so the link goes to your other accounts instead. Instagram
+is left out because its captions can't hold a clickable link. To add a video, add
+an entry with its `url` and `text`; `{url}` in the text becomes the link. The
+videos take turns.
+
 A platform without its secrets is skipped, so you can connect them one at a time.
 Nothing is posted until at least one is connected.
 

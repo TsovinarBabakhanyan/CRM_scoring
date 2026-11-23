@@ -7,6 +7,11 @@ Mondays, Wednesdays and Fridays, Instagram on Tuesdays, Thursdays and
 Saturdays, Reddit on Tuesdays and Thursdays. Which post comes next is worked out from the date, so nothing
 needs to be stored between runs.
 
+Every third day, Facebook, Threads and LinkedIn also share the next video
+link from videos.json (TikTok has no API to repost a video, so the videos
+are shared to the other accounts instead). Instagram is left out: its
+captions can't hold a clickable link.
+
 Uses the platforms' official APIs only, with tokens from the environment
 (GitHub Secrets in the workflow). A platform without its tokens is skipped,
 so the workflow can be switched on before every account is set up.
@@ -37,6 +42,9 @@ SCHEDULE = {
     "instagram": {1, 3, 5},
     "reddit": {1, 3},
 }
+# Video links from videos.json are shared every VIDEO_EVERY days, from START.
+VIDEO_EVERY = 3
+VIDEO_PLATFORMS = {"facebook", "threads", "linkedin"}
 SITE = "https://www.crmscoring.com"
 # Instagram and Threads fetch images from a public address rather than taking
 # an upload; the repository is public, so they're served straight from it.
@@ -59,6 +67,23 @@ def load_posts() -> list[dict]:
     if not posts:
         raise PostError("posts.json has no posts.")
     return posts
+
+
+def load_videos() -> list[dict]:
+    path = HERE / "videos.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+
+
+def video_for(platform: str, day: dt.date, videos: list[dict]) -> dict | None:
+    """The video share due on this platform on this day, or None."""
+    days = (day - START).days
+    if not videos or platform not in VIDEO_PLATFORMS or days < 0 or days % VIDEO_EVERY:
+        return None
+    return videos[(days // VIDEO_EVERY) % len(videos)]
+
+
+def video_text(video: dict) -> str:
+    return video["text"].replace("{url}", video["url"])
 
 
 def post_for(platform: str, day: dt.date, posts: list[dict]) -> dict | None:
@@ -141,7 +166,7 @@ def post_linkedin(text: str, image: Path | None, token: str) -> str:
 
 # --- Facebook Page -----------------------------------------------------------
 
-def post_facebook(text: str, image: Path | None, page_id: str, token: str) -> str:
+def post_facebook(text: str, image: Path | None, page_id: str, token: str, link: str | None = None) -> str:
     base = f"https://graph.facebook.com/{GRAPH_VERSION}/{page_id}"
     if image:
         mime = mimetypes.guess_type(image.name)[0] or "image/png"
@@ -153,7 +178,10 @@ def post_facebook(text: str, image: Path | None, page_id: str, token: str) -> st
                 timeout=120,
             )
     else:
-        resp = requests.post(f"{base}/feed", data={"message": text, "access_token": token}, timeout=30)
+        data = {"message": text, "access_token": token}
+        if link:
+            data["link"] = link  # shows the link's preview card
+        resp = requests.post(f"{base}/feed", data=data, timeout=30)
     body = _check(resp, "Facebook post").json()
     return body.get("post_id") or body.get("id", "posted")
 
@@ -253,6 +281,39 @@ def post_reddit(text: str, client_id: str, secret: str, username: str, password:
 
 # --- Run -------------------------------------------------------------------
 
+def publish(platform: str, text: str, image: Path | None, image_path: str | None, link: str | None = None) -> str | None:
+    """Posts to one platform. Returns the post id, or None if its secrets aren't set."""
+    if platform == "linkedin":
+        token = os.getenv("LINKEDIN_ACCESS_TOKEN")
+        if not token:
+            print(f"{platform}: skipped, LINKEDIN_ACCESS_TOKEN isn't set")
+            return None
+        return post_linkedin(text, image, token)
+    if platform == "facebook":
+        page_id, token = os.getenv("FACEBOOK_PAGE_ID"), os.getenv("FACEBOOK_PAGE_TOKEN")
+        if not (page_id and token):
+            print(f"{platform}: skipped, FACEBOOK_PAGE_ID / FACEBOOK_PAGE_TOKEN aren't set")
+            return None
+        return post_facebook(text, image, page_id, token, link)
+    if platform == "instagram":
+        account_id, token = os.getenv("INSTAGRAM_ACCOUNT_ID"), os.getenv("FACEBOOK_PAGE_TOKEN")
+        if not (account_id and token):
+            print(f"{platform}: skipped, INSTAGRAM_ACCOUNT_ID / FACEBOOK_PAGE_TOKEN aren't set")
+            return None
+        return post_instagram(text, image_path, account_id, token)
+    if platform == "reddit":
+        creds = [os.getenv(k) for k in ("REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USERNAME", "REDDIT_PASSWORD")]
+        if not all(creds):
+            print(f"{platform}: skipped, REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET / REDDIT_USERNAME / REDDIT_PASSWORD aren't set")
+            return None
+        return post_reddit(text, *creds, os.getenv("REDDIT_SUBREDDIT"))
+    token = os.getenv("THREADS_ACCESS_TOKEN")
+    if not token:
+        print(f"{platform}: skipped, THREADS_ACCESS_TOKEN isn't set")
+        return None
+    return post_threads(text, image_path, token)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="show what would be posted, post nothing")
@@ -262,57 +323,38 @@ def main() -> int:
 
     # The schedule follows Yerevan's calendar (UTC+4, no daylight saving).
     today = args.date or (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=4)).date()
-    posts = load_posts()
-    failed = False
+    posts, videos = load_posts(), load_videos()
+
+    # Everything due today: (platform, label, text, image, image_path, link).
+    due = []
     for platform in sorted(SCHEDULE):
         if args.only and platform != args.only:
             continue
         post = post_for(platform, today, posts)
-        if post is None:
+        if post is not None:
+            image_path = post.get("image") or (INSTAGRAM_DEFAULT_IMAGE if platform == "instagram" else None)
+            if platform == "reddit":
+                image_path = None  # Reddit gets text posts; the link shows a preview of the site
+            label = f"{platform}: post {posts.index(post) + 1}/{len(posts)}" + (f" with {Path(image_path).name}" if image_path else "")
+            due.append((platform, label, text_for(platform, post), image_for(post), image_path, None))
+        video = video_for(platform, today, videos)
+        if video is not None:
+            label = f"{platform}: video {videos.index(video) + 1}/{len(videos)}"
+            due.append((platform, label, video_text(video), None, None, video["url"]))
+        if post is None and video is None:
             print(f"{platform}: nothing scheduled for {today:%a %Y-%m-%d}")
-            continue
-        text, image = text_for(platform, post), image_for(post)
-        image_path = post.get("image") or (INSTAGRAM_DEFAULT_IMAGE if platform == "instagram" else None)
-        if platform == "reddit":
-            image_path = None  # Reddit gets text posts; the link shows a preview of the site
-        label = f"{platform}: post {posts.index(post) + 1}/{len(posts)}" + (f" with {Path(image_path).name}" if image_path else "")
+
+    failed = False
+    for platform, label, text, image, image_path, link in due:
         if args.dry_run:
             print(f"{label} (dry run)\n{text}\n")
             continue
         try:
-            if platform == "linkedin":
-                token = os.getenv("LINKEDIN_ACCESS_TOKEN")
-                if not token:
-                    print(f"{platform}: skipped, LINKEDIN_ACCESS_TOKEN isn't set")
-                    continue
-                post_id = post_linkedin(text, image, token)
-            elif platform == "facebook":
-                page_id, token = os.getenv("FACEBOOK_PAGE_ID"), os.getenv("FACEBOOK_PAGE_TOKEN")
-                if not (page_id and token):
-                    print(f"{platform}: skipped, FACEBOOK_PAGE_ID / FACEBOOK_PAGE_TOKEN aren't set")
-                    continue
-                post_id = post_facebook(text, image, page_id, token)
-            elif platform == "instagram":
-                account_id, token = os.getenv("INSTAGRAM_ACCOUNT_ID"), os.getenv("FACEBOOK_PAGE_TOKEN")
-                if not (account_id and token):
-                    print(f"{platform}: skipped, INSTAGRAM_ACCOUNT_ID / FACEBOOK_PAGE_TOKEN aren't set")
-                    continue
-                post_id = post_instagram(text, image_path, account_id, token)
-            elif platform == "reddit":
-                creds = [os.getenv(k) for k in ("REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USERNAME", "REDDIT_PASSWORD")]
-                if not all(creds):
-                    print(f"{platform}: skipped, REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET / REDDIT_USERNAME / REDDIT_PASSWORD aren't set")
-                    continue
-                post_id = post_reddit(text, *creds, os.getenv("REDDIT_SUBREDDIT"))
-            else:
-                token = os.getenv("THREADS_ACCESS_TOKEN")
-                if not token:
-                    print(f"{platform}: skipped, THREADS_ACCESS_TOKEN isn't set")
-                    continue
-                post_id = post_threads(text, image_path, token)
-            print(f"{label}: published ({post_id})")
+            post_id = publish(platform, text, image, image_path, link)
+            if post_id is not None:
+                print(f"{label}: published ({post_id})")
         except (PostError, requests.RequestException) as exc:
-            # One platform failing shouldn't stop the other.
+            # One platform failing shouldn't stop the others.
             print(f"{label}: FAILED: {exc}", file=sys.stderr)
             failed = True
     return 1 if failed else 0

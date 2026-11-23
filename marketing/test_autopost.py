@@ -59,3 +59,18 @@ def test_reddit_title_is_the_first_line_and_fits():
 def test_reddit_defaults_to_the_profile():
     assert autopost.reddit_target("crmscoring", None) == "u_crmscoring"
     assert autopost.reddit_target("crmscoring", "r/crmscoring") == "crmscoring"
+
+
+def test_videos_are_shared_every_third_day_except_on_instagram():
+    videos = autopost.load_videos()
+    assert videos
+    shared = [autopost.video_for("facebook", START + dt.timedelta(days=i), videos) is not None for i in range(7)]
+    assert shared == [True, False, False, True, False, False, True]
+    assert autopost.video_for("instagram", START, videos) is None
+
+
+def test_every_video_text_has_its_link_and_fits_threads():
+    for video in autopost.load_videos():
+        text = autopost.video_text(video)
+        assert video["url"] in text
+        assert len(text) <= 500

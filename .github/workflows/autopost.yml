@@ -1,7 +1,8 @@
 name: Social posts
 
 # Posts the next marketing post from marketing/posts.json: Facebook Page and
-# Threads every day, LinkedIn Mon/Wed/Fri, Instagram Tue/Thu/Sat, Reddit Tue/Thu.
+# Threads every day, LinkedIn Mon/Wed/Fri, Instagram Tue/Thu/Sat, Reddit Tue/Thu,
+# plus a TikTok video link from marketing/videos.json every 3 days.
 # See marketing/README.md.
 on:
   schedule:
