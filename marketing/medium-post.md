@@ -90,7 +90,7 @@ Take your last 50 leads. How many match your best customers on industry, size an
 
 If you can't answer in under a minute, that's what CRM Scoring is for.
 
-It's free to start, no card needed. Pro is $20 a month for teams scoring at volume, and Advanced is $40 a month for agencies with several clients.
+It's free to start, no card needed.
 
 👉 **[crmscoring.com](https://www.crmscoring.com)**
 
