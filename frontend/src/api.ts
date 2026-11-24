@@ -162,6 +162,26 @@ export async function startPayPalCheckout(
   return handle(res);
 }
 
+// A single PayPal payment for one period, without automatic renewal.
+export async function startPayPalOrder(
+  tier: PaidTier,
+  interval: BillingInterval,
+): Promise<{ url: string; order_id: string }> {
+  const res = await apiFetch(`${BASE}/billing/paypal/order`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ tier, interval, source: "app" }),
+  });
+  return handle(res);
+}
+
+// Called on return from a single PayPal payment (?paypal_order=1&token=<order id>);
+// this is what takes the money.
+export async function confirmPayPalOrder(orderId: string): Promise<SubscriptionActivation> {
+  const res = await apiFetch(`${BASE}/billing/paypal/order/${encodeURIComponent(orderId)}`);
+  return handle(res);
+}
+
 // Card payment through the bank's ArCa gateway: one payment for the period,
 // no automatic renewal. Returns the bank's card page URL.
 export async function startBankCardCheckout(tier: PaidTier, interval: BillingInterval): Promise<{ url: string }> {

@@ -239,6 +239,9 @@
   .checkout .error { color: var(--hot); font-size: 0.85rem; }
   .checkout .paypal-alt { margin-top: 6px; }
   .checkout #paypal-card .fine { margin: 0 0 10px; }
+  .checkout .renew { display: flex; align-items: center; gap: 8px; margin: 12px 0 2px; font-weight: 600; cursor: pointer; }
+  .checkout .renew input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+  .checkout #renew-note { margin: 0 0 14px; }
   .checkout #paypal-card:not([hidden]) ~ #bank-checkout:not([hidden]),
   .checkout #paypal-card:not([hidden]) ~ #card-checkout:not([hidden]),
   .checkout #paypal-card:not([hidden]) ~ .paypal-alt,
@@ -408,11 +411,17 @@
           <h3 id="checkout-title">Subscribe</h3>
           <button type="button" class="link-btn" id="checkout-cancel" onclick="closeCheckout()" data-i18n="common.cancel">Cancel</button>
         </div>
+        <!-- PayPal (and its card button) can renew automatically or be a single
+             payment for one period -- the buyer picks. -->
+        <div id="renew-choice" hidden>
+          <label class="renew"><input type="checkbox" id="auto-renew" checked onchange="renewChanged()" /> <span data-i18n="renew.label">Renew automatically</span></label>
+          <p class="fine" id="renew-note">Renews every period; cancel any time.</p>
+        </div>
         <!-- PayPal's "Debit or Credit Card" button: the buyer types their card in
              here, no PayPal account needed, and the money goes to the PayPal
              account. Shown only where PayPal says card payment is available. -->
         <div id="paypal-card" hidden>
-          <p class="fine" data-i18n="paypalCard.fine">Pay by debit or credit card — no PayPal account needed. It renews automatically and you can cancel any time; your license key is shown right after.</p>
+          <p class="fine" data-i18n="paypalCard.fine">Pay by debit or credit card — no PayPal account needed. Your license key is shown right after.</p>
           <div id="paypal-card-button"></div>
         </div>
         <!-- Card payment through the bank (any Visa, Mastercard or ArCa card) appears once the server says it's switched on. -->
@@ -430,7 +439,7 @@
         </div>
         <p id="checkout-form-error" class="error" hidden></p>
         <div class="paypal-alt" id="paypal-alt" hidden>
-          <p class="fine" id="paypal-intro">Pay with PayPal. It renews automatically and you can cancel any time; your license key is shown right after.</p>
+          <p class="fine" id="paypal-intro">Pay with PayPal. Your license key is shown right after.</p>
           <button type="button" id="paypal-api" class="paypal-api" onclick="payWithPayPal()" data-i18n="paypal.api">Pay with PayPal</button>
         </div>
       </div>
@@ -478,7 +487,7 @@
     var I18N = {
       en: {
         "paypal.api": "Pay with PayPal",
-        "paypalCard.fine": "Pay by debit or credit card — no PayPal account needed. It renews automatically and you can cancel any time; your license key is shown right after.",
+        "paypalCard.fine": "Pay by debit or credit card — no PayPal account needed. Your license key is shown right after.",
         "paypalCard.error": "The card payment didn't go through. Check the card details and try again, or pay with PayPal.",
         "bank.fine": "Pay by card — Visa, Mastercard or ArCa, from any bank. One payment for the period you picked; it doesn't renew by itself. Your license key is shown and emailed right after.",
         "bank.email": "Email for your license key",
@@ -486,8 +495,13 @@
         "bank.opening": "Opening the secure card page…",
         "bank.failed": "The card payment didn't go through, so nothing was charged. You can try again or pick another way to pay.",
         "paypal.opening": "Opening PayPal…",
-        "paypal.introApi": "Pay with PayPal. It renews automatically and you can cancel any time; your license key is shown right after.",
-        "paypal.introApiOr": "Or pay with PayPal. It renews automatically and you can cancel any time; your license key is shown right after.",
+        "paypal.introApi": "Pay with PayPal. Your license key is shown right after.",
+        "paypal.introApiOr": "Or pay with PayPal. Your license key is shown right after.",
+        "renew.label": "Renew automatically",
+        "renew.on": "Renews every {period}; cancel any time.",
+        "renew.off": "One payment for one {period}; it won't renew. Pay again when you want to continue.",
+        "renew.month": "month",
+        "renew.year": "year",
         "meta.title": "CRM Scoring — AI Lead Scoring, Self-Hosted",
         "meta.description": "Hybrid rule + LLM lead scoring you self-host. Your CRM data never leaves your infrastructure.",
         "nav.language": "Language",
@@ -553,7 +567,7 @@
       },
       ru: {
         "paypal.api": "Оплатить через PayPal",
-        "paypalCard.fine": "Оплата дебетовой или кредитной картой — аккаунт PayPal не нужен. Подписка продлевается автоматически, отменить можно в любой момент; ключ лицензии показывается сразу после оплаты.",
+        "paypalCard.fine": "Оплата дебетовой или кредитной картой — аккаунт PayPal не нужен. Ключ лицензии показывается сразу после оплаты.",
         "paypalCard.error": "Оплата картой не прошла. Проверьте данные карты и попробуйте ещё раз или оплатите через PayPal.",
         "bank.fine": "Оплата картой — Visa, Mastercard или ArCa любого банка. Один платёж за выбранный период, без автоматического продления. Ключ лицензии показывается и приходит на почту сразу после оплаты.",
         "bank.email": "Почта для ключа лицензии",
@@ -561,8 +575,13 @@
         "bank.opening": "Открываем защищённую страницу оплаты…",
         "bank.failed": "Оплата картой не прошла, деньги не списаны. Попробуйте ещё раз или выберите другой способ оплаты.",
         "paypal.opening": "Открываем PayPal…",
-        "paypal.introApi": "Оплатите через PayPal. Подписка продлевается автоматически, отменить можно в любой момент; ключ лицензии показывается сразу после оплаты.",
-        "paypal.introApiOr": "Или оплатите через PayPal. Подписка продлевается автоматически, отменить можно в любой момент; ключ лицензии показывается сразу после оплаты.",
+        "paypal.introApi": "Оплатите через PayPal. Ключ лицензии показывается сразу после оплаты.",
+        "paypal.introApiOr": "Или оплатите через PayPal. Ключ лицензии показывается сразу после оплаты.",
+        "renew.label": "Продлевать автоматически",
+        "renew.on": "Продлевается каждый {period}; отменить можно в любой момент.",
+        "renew.off": "Один платёж за один {period}, без продления. Оплатите снова, когда захотите продолжить.",
+        "renew.month": "месяц",
+        "renew.year": "год",
         "meta.title": "CRM Scoring — оценка лидов с ИИ на вашем сервере",
         "meta.description": "Гибридная оценка лидов по правилам и с помощью LLM, которую вы размещаете у себя. Данные CRM не покидают вашу инфраструктуру.",
         "nav.language": "Язык",
@@ -628,7 +647,7 @@
       },
       hy: {
         "paypal.api": "Վճարել PayPal-ով",
-        "paypalCard.fine": "Վճարեք դեբետային կամ կրեդիտ քարտով՝ առանց PayPal հաշվի։ Բաժանորդագրությունը երկարաձգվում է ավտոմատ, և կարող եք չեղարկել ցանկացած պահի․ լիցենզիայի բանալին ցույց է տրվում անմիջապես վճարումից հետո։",
+        "paypalCard.fine": "Վճարեք դեբետային կամ կրեդիտ քարտով՝ առանց PayPal հաշվի։ Լիցենզիայի բանալին ցույց է տրվում անմիջապես վճարումից հետո։",
         "paypalCard.error": "Քարտով վճարումը չանցավ։ Ստուգեք քարտի տվյալները և փորձեք կրկին կամ վճարեք PayPal-ով։",
         "bank.fine": "Վճարեք քարտով՝ Visa, Mastercard կամ ArCa, ցանկացած բանկի։ Մեկ վճարում ընտրված ժամանակահատվածի համար, առանց ավտոմատ երկարաձգման։ Լիցենզիայի բանալին ցույց է տրվում և ուղարկվում էլ. փոստով անմիջապես վճարումից հետո։",
         "bank.email": "Էլ. հասցե լիցենզիայի բանալու համար",
@@ -636,8 +655,13 @@
         "bank.opening": "Բացվում է անվտանգ վճարման էջը…",
         "bank.failed": "Քարտով վճարումը չանցավ, գումար չի գանձվել։ Փորձեք կրկին կամ ընտրեք վճարման այլ եղանակ։",
         "paypal.opening": "Բացվում է PayPal-ը…",
-        "paypal.introApi": "Վճարեք PayPal-ով։ Բաժանորդագրությունը երկարաձգվում է ավտոմատ, և կարող եք չեղարկել ցանկացած պահի․ լիցենզիայի բանալին ցույց է տրվում անմիջապես վճարումից հետո։",
-        "paypal.introApiOr": "Կամ վճարեք PayPal-ով։ Բաժանորդագրությունը երկարաձգվում է ավտոմատ, և կարող եք չեղարկել ցանկացած պահի․ լիցենզիայի բանալին ցույց է տրվում անմիջապես վճարումից հետո։",
+        "paypal.introApi": "Վճարեք PayPal-ով։ Լիցենզիայի բանալին ցույց է տրվում անմիջապես վճարումից հետո։",
+        "paypal.introApiOr": "Կամ վճարեք PayPal-ով։ Լիցենզիայի բանալին ցույց է տրվում անմիջապես վճարումից հետո։",
+        "renew.label": "Երկարաձգել ավտոմատ",
+        "renew.on": "Երկարաձգվում է յուրաքանչյուր {period}․ կարող եք չեղարկել ցանկացած պահի։",
+        "renew.off": "Մեկ վճարում մեկ {period}ի համար՝ առանց երկարաձգման։ Վճարեք կրկին, երբ ցանկանաք շարունակել։",
+        "renew.month": "ամիս",
+        "renew.year": "տարի",
         "meta.title": "CRM Scoring — լիդերի գնահատում AI-ով ձեր սերվերում",
         "meta.description": "Լիդերի հիբրիդային գնահատում՝ կանոններով և LLM-ով, որը տեղադրում եք ձեր սերվերում։ CRM-ի տվյալները երբեք դուրս չեն գալիս ձեր ենթակառուցվածքից։",
         "nav.language": "Լեզու",
@@ -830,6 +854,8 @@
       $("card-checkout").hidden = true;
       $("bank-checkout").hidden = true;
       $("paypal-card").hidden = true;
+      $("renew-choice").hidden = true;
+      updateRenewNote();
       $("bank-pay").disabled = false;
       $("bank-pay").textContent = t("bank.pay");
       $("paypal-alt").hidden = false;
@@ -844,48 +870,79 @@
         $("card-checkout").hidden = !cardToo;
         $("paypal-alt").hidden = !config.paypal_available;
         $("paypal-intro").textContent = t(cardToo || bankToo ? "paypal.introApiOr" : "paypal.introApi");
+        $("renew-choice").hidden = !config.paypal_available;
+        paypalConfig = config;
         if (config.paypal_client_id) showPayPalCard(config, plan);
         if (!config.paypal_available && !cardToo && !bankToo) formError(t("checkout.unavailable"));
       }, function () {});
     }
     // PayPal's script loads once, the first time someone opens a checkout.
-    var paypalSdk = null;
-    function loadPayPalSdk(config) {
-      if (!paypalSdk) {
-        paypalSdk = new Promise(function (resolve, reject) {
+    // A subscription and a one-off payment need PayPal's script loaded
+    // differently, so each gets its own copy under its own name.
+    var paypalSdk = {};
+    var paypalConfig = null;
+    function autoRenew() { return $("auto-renew").checked; }
+    function updateRenewNote() {
+      var period = t(checkoutPlan && checkoutPlan.interval === "annual" ? "renew.year" : "renew.month");
+      $("renew-note").textContent = t(autoRenew() ? "renew.on" : "renew.off", { period: period });
+    }
+    function renewChanged() {
+      updateRenewNote();
+      formError("");
+      if (paypalConfig && paypalConfig.paypal_client_id && checkoutPlan) showPayPalCard(paypalConfig, checkoutPlan);
+    }
+    function loadPayPalSdk(config, renew) {
+      var name = renew ? "paypalRenew" : "paypalOnce";
+      if (!paypalSdk[name]) {
+        paypalSdk[name] = new Promise(function (resolve, reject) {
           var script = document.createElement("script");
           var locale = { ru: "ru_RU", en: "en_US" }[lang];
           script.src = "https://www.paypal.com/sdk/js?client-id=" + encodeURIComponent(config.paypal_client_id) +
-            "&vault=true&intent=subscription&components=buttons&currency=" + encodeURIComponent(config.currency || "USD") +
+            (renew ? "&vault=true&intent=subscription" : "&intent=capture") +
+            "&components=buttons&currency=" + encodeURIComponent(config.currency || "USD") +
             (locale ? "&locale=" + locale : "");
-          script.onload = function () { resolve(window.paypal); };
-          script.onerror = function () { paypalSdk = null; reject(new Error("PayPal didn't load")); };
+          script.setAttribute("data-namespace", name);
+          script.onload = function () { resolve(window[name]); };
+          script.onerror = function () { delete paypalSdk[name]; reject(new Error("PayPal didn't load")); };
           document.head.appendChild(script);
         });
       }
-      return paypalSdk;
+      return paypalSdk[name];
     }
     function showPayPalCard(config, plan) {
-      loadPayPalSdk(config).then(function (paypal) {
-        if (checkoutPlan !== plan || !paypal || !paypal.Buttons) return;
+      var renew = autoRenew();
+      $("paypal-card").hidden = true;
+      $("paypal-card-button").innerHTML = "";
+      loadPayPalSdk(config, renew).then(function (paypal) {
+        if (checkoutPlan !== plan || autoRenew() !== renew || !paypal || !paypal.Buttons) return;
         $("paypal-card-button").innerHTML = "";
-        var button = paypal.Buttons({
-          fundingSource: paypal.FUNDING.CARD,
-          // Our server starts the subscription (same plan and price as the
-          // PayPal button), so PayPal only collects the card.
-          createSubscription: function () {
-            formError("");
-            return api("/billing/paypal/checkout", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ tier: plan.tier, interval: plan.interval, source: "site" })
-            }).then(function (result) { return result.subscription_id; });
-          },
-          onApprove: function (data) {
+        // Our server starts the subscription or the one-off order (same plan
+        // and price as the PayPal button), so PayPal only collects the card.
+        function start(path) {
+          formError("");
+          return api(path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tier: plan.tier, interval: plan.interval, source: "site" })
+          });
+        }
+        var options = { fundingSource: paypal.FUNDING.CARD, onError: function () { formError(t("paypalCard.error")); } };
+        if (renew) {
+          options.createSubscription = function () {
+            return start("/billing/paypal/checkout").then(function (result) { return result.subscription_id; });
+          };
+          options.onApprove = function (data) {
             window.location.href = "thank-you.html?paypal=1&subscription_id=" + encodeURIComponent(data.subscriptionID);
-          },
-          onError: function () { formError(t("paypalCard.error")); }
-        });
+          };
+        } else {
+          options.createOrder = function () {
+            return start("/billing/paypal/order").then(function (result) { return result.order_id; });
+          };
+          options.onApprove = function (data) {
+            window.location.href = "thank-you.html?paypal_order=1&token=" + encodeURIComponent(data.orderID);
+          };
+        }
+        var button = paypal.Buttons(options);
         if (!button.isEligible()) return;
         $("paypal-card").hidden = false;
         $("paypal-intro").textContent = t("paypal.introApiOr");
@@ -897,7 +954,7 @@
       formError("");
       $("paypal-api").disabled = true;
       $("paypal-api").textContent = t("paypal.opening");
-      api("/billing/paypal/checkout", {
+      api(autoRenew() ? "/billing/paypal/checkout" : "/billing/paypal/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier: checkoutPlan.tier, interval: checkoutPlan.interval, source: "site" })
@@ -957,6 +1014,7 @@
       $("bank-checkout").hidden = true;
       $("card-checkout").hidden = true;
       $("paypal-alt").hidden = true;
+      $("renew-choice").hidden = true;
       formError(t("bank.failed"));
     }
   </script>

@@ -58,6 +58,26 @@ def subscription_view(subscription: dict) -> dict:
     }
 
 
+def order_view(order: dict) -> dict:
+    """A PayPal order as {id, paid, amount (cents), currency, created,
+    customer_email, metadata}."""
+    unit = (order.get("purchase_units") or [{}])[0]
+    captures = (unit.get("payments") or {}).get("captures") or []
+    amount = (captures[0].get("amount") if captures else None) or unit.get("amount") or {}
+    payer = order.get("payer") or {}
+    email = payer.get("email_address") or ((order.get("payment_source") or {}).get("paypal") or {}).get("email_address")
+    paid = order.get("status") == "COMPLETED" and any(c.get("status") == "COMPLETED" for c in captures)
+    return {
+        "id": order["id"],
+        "paid": paid,
+        "amount": int(round(float(amount.get("value") or 0) * 100)),
+        "currency": amount.get("currency_code") or "",
+        "created": _epoch(order.get("create_time")),
+        "customer_email": email,
+        "metadata": _metadata(unit.get("custom_id")),
+    }
+
+
 class PayPalBilling:
     _token: tuple[str, float] | None = None
     _plan_ids: dict[str, str] = {}
@@ -207,6 +227,63 @@ class PayPalBilling:
         if view["status"] not in ("cancelled", "expired"):
             self._req("POST", f"/v1/billing/subscriptions/{sub_id}/cancel", json={"reason": "Cancelled by the customer"})
         return {**view, "status": "cancelled" if not at_period_end else view["status"], "cancel_at_period_end": True}
+
+    # --- One-off payments (no renewal) ---
+
+    def create_order(
+        self,
+        *,
+        amount: int,
+        description: str,
+        currency: str,
+        metadata: dict,
+        return_url: str,
+        cancel_url: str,
+        lang: str = "en",
+    ) -> dict:
+        """A single payment for one period of a plan (Orders API). Returns its
+        id and PayPal's approval page URL. Nothing renews."""
+        context = {
+            "brand_name": "CRM Scoring",
+            "user_action": "PAY_NOW",
+            "shipping_preference": "NO_SHIPPING",
+            "return_url": return_url,
+            "cancel_url": cancel_url,
+        }
+        if lang in _LOCALES:
+            context["locale"] = _LOCALES[lang]
+        body = {
+            "intent": "CAPTURE",
+            "purchase_units": [
+                {
+                    "description": description[:127],
+                    "custom_id": "|".join(
+                        [metadata.get("tier", ""), metadata.get("interval", ""), metadata.get("tenant_id", "")]
+                    ),
+                    "amount": {"currency_code": currency.upper(), "value": f"{amount / 100:.2f}"},
+                }
+            ],
+            "payment_source": {"paypal": {"experience_context": context}},
+        }
+        created = self._req("POST", "/v2/checkout/orders", json=body)
+        approve = next(
+            (link["href"] for link in created.get("links", []) if link.get("rel") in ("payer-action", "approve")), None
+        )
+        if not approve:
+            raise BillingError(502, "PayPal didn't return an approval link.")
+        return {"id": created["id"], "url": approve}
+
+    def capture_order(self, order_id: str) -> dict:
+        """Takes the money for an approved order (once; an order that's
+        already captured is just read back). Returns order_view()."""
+        order = self._req("GET", f"/v2/checkout/orders/{order_id}")
+        if order.get("status") == "APPROVED":
+            try:
+                order = self._req("POST", f"/v2/checkout/orders/{order_id}/capture", json={})
+            except BillingError:
+                # Captured meanwhile by a second tab or a reload: read it again.
+                order = self._req("GET", f"/v2/checkout/orders/{order_id}")
+        return order_view(order)
 
     # --- Webhooks ---
 

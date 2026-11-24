@@ -162,8 +162,11 @@
     // A bank card payment comes back with ?bank=1&orderId=... .
     var paypalId = params.get("paypal") ? params.get("subscription_id") : null;
     var bankOrderId = params.get("bank") ? params.get("orderId") : null;
-    var sessionId = params.get("session_id") || paypalId || bankOrderId;
-    var confirmPath = bankOrderId ? "/billing/bank/order/" : paypalId ? "/billing/paypal/subscription/" : "/billing/session/";
+    // A single PayPal payment (no renewal) comes back with ?paypal_order=1&token=<order id>.
+    var paypalOrderId = params.get("paypal_order") ? params.get("token") : null;
+    var sessionId = params.get("session_id") || paypalId || bankOrderId || paypalOrderId;
+    var confirmPath = bankOrderId ? "/billing/bank/order/" : paypalOrderId ? "/billing/paypal/order/"
+      : paypalId ? "/billing/paypal/subscription/" : "/billing/session/";
     if (sessionId) {
       message.textContent = crmLang.t("ty.confirming");
       fetch(API_BASE + confirmPath + encodeURIComponent(sessionId), { headers: { "Accept-Language": crmLang.lang } }).then(function (res) {

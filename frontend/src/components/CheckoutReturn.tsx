@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { confirmBankCard, confirmCheckout, confirmPayPal } from "../api";
+import { confirmBankCard, confirmCheckout, confirmPayPal, confirmPayPalOrder } from "../api";
 import { useI18n } from "../i18n";
 import { TIER_LABEL } from "../plans";
 import type { SubscriptionActivation } from "../types";
@@ -9,7 +9,7 @@ type Phase =
   | { kind: "done"; result: SubscriptionActivation }
   | { kind: "failed"; message: string };
 
-type Return = { provider: "stripe" | "paypal" | "bank"; id: string };
+type Return = { provider: "stripe" | "paypal" | "paypalOrder" | "bank"; id: string };
 
 // Stripe comes back with ?checkout=<session id>; PayPal with
 // ?paypal=1&subscription_id=I-... (it adds its own ba_token/token too); the
@@ -20,11 +20,14 @@ function checkoutReturnFromUrl(): Return | null {
   if (stripe) return { provider: "stripe", id: stripe };
   const paypal = params.get("paypal") ? params.get("subscription_id") : null;
   if (paypal) return { provider: "paypal", id: paypal };
+  // A single PayPal payment (no renewal): ?paypal_order=1&token=<order id>.
+  const paypalOrder = params.get("paypal_order") ? params.get("token") : null;
+  if (paypalOrder) return { provider: "paypalOrder", id: paypalOrder };
   const bank = params.get("bank") ? params.get("orderId") : null;
   return bank ? { provider: "bank", id: bank } : null;
 }
 
-const CONFIRM = { stripe: confirmCheckout, paypal: confirmPayPal, bank: confirmBankCard };
+const CONFIRM = { stripe: confirmCheckout, paypal: confirmPayPal, paypalOrder: confirmPayPalOrder, bank: confirmBankCard };
 
 // The buyer comes back to /?checkout=<session id> after paying. This
 // confirms the payment, shows the outcome (workspace upgraded, or the license
@@ -53,7 +56,7 @@ export function CheckoutReturn({ onDone }: { onDone: () => void }) {
 
   function close() {
     const params = new URLSearchParams(window.location.search);
-    for (const name of ["checkout", "paypal", "subscription_id", "ba_token", "token", "bank", "orderId"]) params.delete(name);
+    for (const name of ["checkout", "paypal", "subscription_id", "ba_token", "token", "bank", "orderId", "paypal_order", "PayerID"]) params.delete(name);
     const query = params.toString();
     window.history.replaceState(null, "", window.location.pathname + (query ? `?${query}` : "") + window.location.hash);
     onDone();

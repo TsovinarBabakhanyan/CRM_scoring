@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { startBankCardCheckout, startCheckout, startPayPalCheckout } from "../api";
+import { startBankCardCheckout, startCheckout, startPayPalCheckout, startPayPalOrder } from "../api";
 import { useI18n } from "../i18n";
 import { TIER_LABEL } from "../plans";
 import { PayPalCardButton } from "./PayPalCardButton";
@@ -23,6 +23,8 @@ function priceFor(config: BillingConfig, tier: PaidTier, interval: BillingInterv
 export function Subscribe({ config, tier, interval, onClose }: Props) {
   const { t } = useI18n();
   const [redirecting, setRedirecting] = useState<"card" | "bank" | "paypal" | null>(null);
+  // PayPal (and its card button) can renew automatically or be one payment for one period.
+  const [renew, setRenew] = useState(true);
   const [error, setError] = useState<string | null>(
     config.checkout_available || config.paypal_available || config.bank_card_available ? null : t("sub.notConfigured"),
   );
@@ -43,7 +45,7 @@ export function Subscribe({ config, tier, interval, onClose }: Props) {
     setRedirecting("paypal");
     setError(null);
     try {
-      const { url } = await startPayPalCheckout(tier, interval);
+      const { url } = renew ? await startPayPalCheckout(tier, interval) : await startPayPalOrder(tier, interval);
       window.location.assign(url);
     } catch (err) {
       setRedirecting(null);
@@ -84,12 +86,30 @@ export function Subscribe({ config, tier, interval, onClose }: Props) {
       </div>
 
       {error && <p className="mt-3 text-hot">{error}</p>}
+      {config.paypal_available && (
+        <div className="mt-3">
+          <label className="flex cursor-pointer items-center gap-2 font-medium text-heading">
+            <input
+              type="checkbox"
+              checked={renew}
+              onChange={(e) => setRenew(e.target.checked)}
+              disabled={redirecting !== null}
+              className="h-4 w-4 accent-accent"
+            />
+            {t("sub.renewLabel")}
+          </label>
+          <p className="mt-1 text-xs text-text/75">
+            {t(renew ? "sub.renewOn" : "sub.renewOff", { period: t(annual ? "sub.periodYear" : "sub.periodMonth") })}
+          </p>
+        </div>
+      )}
       {config.paypal_available && config.paypal_client_id && (
         <PayPalCardButton
           clientId={config.paypal_client_id}
           currency={config.currency ?? "USD"}
           tier={tier}
           interval={interval}
+          renew={renew}
           disabled={redirecting !== null}
           onError={setError}
         />

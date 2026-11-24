@@ -457,53 +457,105 @@ def bank_checkout(
     return {"url": started["url"], "order_id": started["id"]}
 
 
-def _bank_order_view(order: dict) -> dict:
-    """A paid bank order in the subscription shape _fulfil works with: one
-    period, starting when the order was made, that never renews."""
-    metadata = order["metadata"]
-    started = order_created_at(order["order_number"])
+def _fulfil_one_off(order_id: str, paid: bool, amount: int | None, started: int | None,
+                    metadata: dict, email: str | None) -> dict:
+    """A one-off payment (bank card, or PayPal without renewal) for one
+    period of a plan: returns its license key, or upgrades the workspace
+    until the paid period ends. Nothing renews, so there's nothing to
+    cancel. A reload shows the same key again."""
+    if not paid:
+        raise HTTPException(status_code=409, detail="This payment isn't complete yet.")
     interval = metadata.get("interval")
     if started is None or interval not in _INTERVALS:
         raise HTTPException(status_code=400, detail="This order isn't for a CRM Scoring plan.")
-    return {
-        "id": f"bank:{order['id']}",
-        "status": "active" if order["paid"] else "unpaid",
-        "customer_email": metadata.get("email") or None,
+    subscription = {
+        "id": order_id,
+        "status": "active",
+        "customer_email": email or None,
         "metadata": {k: v for k, v in metadata.items() if k in ("tier", "interval", "tenant_id")},
         "current_period_end": started + _validity_days(interval) * 86400,
         "cancel_at_period_end": True,
     }
-
-
-@router.get("/bank/order/{order_id}")
-@limiter.limit(RATE_LIMIT_AUTH)
-def bank_order(request: Request, order_id: str = PathParam(max_length=64, pattern=r"^[A-Za-z0-9-]+$")):
-    """Confirms a card payment and returns its license key (or that the
-    workspace was upgraded until the paid period ends). A reload shows the
-    same key again."""
-    order = _call("look up the card payment", _bank().get_order, order_id)
-    if not order["paid"]:
-        raise HTTPException(status_code=409, detail="This payment isn't complete yet.")
-    subscription = _bank_order_view(order)
-    # Check the amount too, so an order registered some other way for less
-    # can't unlock a plan.
+    # Check the amount too, so an order made some other way for less can't
+    # unlock a plan.
     plan = _plan_of(subscription)
-    if plan is None or order.get("amount") != _amount_cents(*plan):
-        logger.error("Bank order {} doesn't match a CRM Scoring price.", order_id)
+    if plan is None or amount != _amount_cents(*plan):
+        logger.error("Order {} doesn't match a CRM Scoring price.", order_id)
         raise HTTPException(status_code=400, detail="This order isn't for a CRM Scoring plan.")
 
     tenant_id = subscription["metadata"].get("tenant_id")
     upgraded = bool(HOSTED_MODE and tenant_id)
     if upgraded:
-        # Nothing renews: the workspace gets the plan until the paid period
-        # ends, with no subscription left on it to cancel. Re-running this
-        # (a reload) just sets the same end date again.
+        # The workspace gets the plan until the paid period ends, with no
+        # subscription left on it to cancel. Re-running this (a reload)
+        # just sets the same end date again.
         storage.set_tenant_subscription(tenant_id, plan[0], subscription["id"])
         storage.end_tenant_subscription(subscription["id"], subscription["current_period_end"])
     result = _fulfil(subscription)
     if result["status"] == "duplicate" and result["license_key"]:
         result["status"] = "ok"
     return {**result, "workspace_upgraded": upgraded}
+
+
+@router.get("/bank/order/{order_id}")
+@limiter.limit(RATE_LIMIT_AUTH)
+def bank_order(request: Request, order_id: str = PathParam(max_length=64, pattern=r"^[A-Za-z0-9-]+$")):
+    """Confirms a bank card payment and returns its license key (or that
+    the workspace was upgraded until the paid period ends)."""
+    order = _call("look up the card payment", _bank().get_order, order_id)
+    metadata = order["metadata"]
+    return _fulfil_one_off(
+        f"bank:{order['id']}", order["paid"], order.get("amount"),
+        order_created_at(order["order_number"]), metadata, metadata.get("email"),
+    )
+
+
+@router.post("/paypal/order")
+@limiter.limit(RATE_LIMIT_AUTH)
+def paypal_order_checkout(
+    request: Request,
+    payload: CheckoutRequest,
+    tenant: storage.Tenant | None = Depends(get_optional_tenant),
+):
+    """A single PayPal payment (PayPal or card) for one month or one year
+    of the plan, without automatic renewal; returns PayPal's approval page
+    URL and the order id. PayPal sends the buyer back with
+    ?paypal_order=1&token=<order id>, and that page confirms it through
+    /paypal/order/<id>, which takes the money."""
+    metadata = {"tier": payload.tier, "interval": payload.interval}
+    workspace = HOSTED_MODE and tenant is not None and tenant.id != storage.DEFAULT_TENANT_ID
+    if workspace:
+        metadata["tenant_id"] = tenant.id
+    if payload.source == "site":
+        return_url = f"{STOREFRONT_URL.rstrip('/')}/thank-you.html?paypal_order=1"
+        cancel_url = f"{STOREFRONT_URL.rstrip('/')}/#pricing"
+    else:
+        return_url = f"{APP_BASE_URL.rstrip('/')}/?paypal_order=1"
+        cancel_url = f"{APP_BASE_URL.rstrip('/')}/#plans"
+    started = _call(
+        "start PayPal checkout",
+        _paypal().create_order,
+        amount=_amount_cents(payload.tier, payload.interval),
+        description=f"{_PRODUCT_NAMES[payload.tier]} ({payload.interval}, no renewal)",
+        currency=BILLING_CURRENCY,
+        metadata=metadata,
+        return_url=return_url,
+        cancel_url=cancel_url,
+        lang=request_lang(request),
+    )
+    return {"url": started["url"], "order_id": started["id"]}
+
+
+@router.get("/paypal/order/{order_id}")
+@limiter.limit(RATE_LIMIT_AUTH)
+def paypal_order(request: Request, order_id: str = PathParam(max_length=64, pattern=r"^[A-Z0-9]+$")):
+    """Takes the money for an approved one-off PayPal payment and returns
+    its license key (or that the workspace was upgraded)."""
+    order = _call("confirm the PayPal payment", _paypal().capture_order, order_id)
+    return _fulfil_one_off(
+        f"paypal-order:{order['id']}", order["paid"], order["amount"], order["created"],
+        order["metadata"], order["customer_email"],
+    )
 
 
 @router.post("/paypal/webhook")

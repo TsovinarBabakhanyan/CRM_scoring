@@ -6,7 +6,7 @@ import * as api from "../api";
 
 vi.mock("../api", async (importActual) => {
   const actual = await importActual<typeof api>();
-  return { ...actual, confirmCheckout: vi.fn(), confirmPayPal: vi.fn(), confirmBankCard: vi.fn() };
+  return { ...actual, confirmCheckout: vi.fn(), confirmPayPal: vi.fn(), confirmBankCard: vi.fn(), confirmPayPalOrder: vi.fn() };
 });
 
 describe("CheckoutReturn", () => {
@@ -94,6 +94,26 @@ describe("CheckoutReturn after a bank card payment", () => {
 
     expect(await screen.findByText(/this workspace is now on Pro/i)).toBeInTheDocument();
     expect(api.confirmBankCard).toHaveBeenCalledWith("ord-123");
+    expect(api.confirmPayPal).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(window.location.search).toBe("");
+  });
+});
+
+describe("CheckoutReturn after a single PayPal payment", () => {
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  it("captures the PayPal order it came back with and tidies the URL", async () => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, "", "/?paypal_order=1&token=5O190127TN364715T&PayerID=P1");
+    vi.mocked(api.confirmPayPalOrder).mockResolvedValue({
+      status: "ok", email: "jo@example.com", tier: "pro", plan: "monthly", license_key: "LK", workspace_upgraded: true,
+    });
+
+    render(<CheckoutReturn onDone={vi.fn()} />);
+
+    expect(await screen.findByText(/this workspace is now on Pro/i)).toBeInTheDocument();
+    expect(api.confirmPayPalOrder).toHaveBeenCalledWith("5O190127TN364715T");
     expect(api.confirmPayPal).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(window.location.search).toBe("");
