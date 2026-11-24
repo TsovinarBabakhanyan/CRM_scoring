@@ -283,7 +283,7 @@ describe("LicenseBanner with PayPal", () => {
   it("offers PayPal next to card checkout and sends the buyer to PayPal", async () => {
     vi.mocked(api.fetchLicenseStatus).mockResolvedValue(trial);
     vi.mocked(api.fetchBillingConfig).mockResolvedValue({ ...configured, paypal_available: true });
-    vi.mocked(api.startPayPalCheckout).mockResolvedValue({ url: "https://www.paypal.com/webapps/billing/subscriptions?ba_token=BA-1" });
+    vi.mocked(api.startPayPalCheckout).mockResolvedValue({ url: "https://www.paypal.com/webapps/billing/subscriptions?ba_token=BA-1", subscription_id: "I-ABC123" });
     const assign = vi.fn();
     vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, assign });
 

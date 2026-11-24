@@ -150,7 +150,10 @@ export async function startCheckout(tier: PaidTier, interval: BillingInterval): 
 }
 
 // PayPal: starts a subscription and returns the URL of PayPal's approval page.
-export async function startPayPalCheckout(tier: PaidTier, interval: BillingInterval): Promise<{ url: string }> {
+export async function startPayPalCheckout(
+  tier: PaidTier,
+  interval: BillingInterval,
+): Promise<{ url: string; subscription_id: string }> {
   const res = await apiFetch(`${BASE}/billing/paypal/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

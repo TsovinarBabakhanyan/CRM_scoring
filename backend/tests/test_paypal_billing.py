@@ -101,6 +101,7 @@ def _webhook(client, event, sig="good"):
 def test_config_reports_paypal(client, paypal_mode):
     body = client.get("/api/billing/config").json()
     assert body["paypal_available"] is True
+    assert body["paypal_client_id"] == "client"
     assert "top-secret" not in json.dumps(body)
 
 

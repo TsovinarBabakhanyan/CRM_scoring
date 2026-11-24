@@ -265,6 +265,8 @@ def billing_config():
     return {
         "checkout_available": _configured(),
         "paypal_available": _paypal_configured(),
+        # Public by design: PayPal's card button loads with it in the browser.
+        "paypal_client_id": PAYPAL_CLIENT_ID if _paypal_configured() else None,
         "bank_card_available": _bank_configured(),
         "currency": BILLING_CURRENCY,
         "environment": "live" if STRIPE_SECRET_KEY.startswith(("sk_live_", "rk_live_")) else "test",

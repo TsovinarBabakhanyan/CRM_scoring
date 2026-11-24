@@ -271,6 +271,8 @@ export const en = {
   "sub.bankCard": "Pay by card",
   "sub.bankFine": "Visa, Mastercard or ArCa, from any bank. One payment for this period; it doesn't renew by itself.",
   "sub.openingBank": "Opening the secure card page…",
+  "sub.paypalCardFine": "Pay by debit or credit card — no PayPal account needed. Renews automatically; cancel any time.",
+  "sub.paypalCardError": "The card payment didn't go through. Check the card details and try again, or pay with PayPal.",
   "sub.payPal": "Pay with PayPal",
   "sub.openingPayPal": "Opening PayPal…",
 } as const;

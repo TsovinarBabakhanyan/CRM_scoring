@@ -271,6 +271,8 @@ export const ru: Record<MessageKey, string> = {
   "sub.bankCard": "Оплатить картой",
   "sub.bankFine": "Visa, Mastercard или ArCa любого банка. Один платёж за этот период, без автоматического продления.",
   "sub.openingBank": "Открываем защищённую страницу оплаты…",
+  "sub.paypalCardFine": "Оплата дебетовой или кредитной картой — аккаунт PayPal не нужен. Продлевается автоматически, отменить можно в любой момент.",
+  "sub.paypalCardError": "Оплата картой не прошла. Проверьте данные карты и попробуйте ещё раз или оплатите через PayPal.",
   "sub.payPal": "Оплатить через PayPal",
   "sub.openingPayPal": "Открываем PayPal…",
 };

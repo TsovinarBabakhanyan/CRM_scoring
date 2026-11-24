@@ -271,6 +271,8 @@ export const hy: Record<MessageKey, string> = {
   "sub.bankCard": "Վճարել քարտով",
   "sub.bankFine": "Visa, Mastercard կամ ArCa՝ ցանկացած բանկի։ Մեկ վճարում այս ժամանակահատվածի համար, առանց ավտոմատ երկարաձգման։",
   "sub.openingBank": "Բացվում է անվտանգ վճարման էջը…",
+  "sub.paypalCardFine": "Վճարեք դեբետային կամ կրեդիտ քարտով՝ առանց PayPal հաշվի։ Երկարաձգվում է ավտոմատ, կարող եք չեղարկել ցանկացած պահի։",
+  "sub.paypalCardError": "Քարտով վճարումը չանցավ։ Ստուգեք քարտի տվյալները և փորձեք կրկին կամ վճարեք PayPal-ով։",
   "sub.payPal": "Վճարել PayPal-ով",
   "sub.openingPayPal": "Բացվում է PayPal-ը…",
 };

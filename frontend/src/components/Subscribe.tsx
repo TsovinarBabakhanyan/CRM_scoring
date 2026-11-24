@@ -2,6 +2,7 @@ import { useState } from "react";
 import { startBankCardCheckout, startCheckout, startPayPalCheckout } from "../api";
 import { useI18n } from "../i18n";
 import { TIER_LABEL } from "../plans";
+import { PayPalCardButton } from "./PayPalCardButton";
 import type { BillingConfig, BillingInterval, PaidTier } from "../types";
 
 interface Props {
@@ -83,6 +84,16 @@ export function Subscribe({ config, tier, interval, onClose }: Props) {
       </div>
 
       {error && <p className="mt-3 text-hot">{error}</p>}
+      {config.paypal_available && config.paypal_client_id && (
+        <PayPalCardButton
+          clientId={config.paypal_client_id}
+          currency={config.currency ?? "USD"}
+          tier={tier}
+          interval={interval}
+          disabled={redirecting !== null}
+          onError={setError}
+        />
+      )}
       {config.bank_card_available && (
         <>
           <p className="mt-3 text-xs text-text/75">{t("sub.bankFine")}</p>

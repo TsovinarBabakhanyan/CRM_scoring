@@ -39,12 +39,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            # Payment happens on Stripe's checkout page (a full-page
-            # redirect), so the app itself loads nothing from third parties.
-            "script-src 'self'; "
+            # Stripe, PayPal and the bank take payment on their own pages
+            # (full-page redirects). The one exception is PayPal's "Debit or
+            # Credit Card" button, whose script and card form come from PayPal.
+            "script-src 'self' https://*.paypal.com; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data:; "
-            "connect-src 'self'; "
+            "img-src 'self' data: https://*.paypal.com https://*.paypalobjects.com; "
+            "connect-src 'self' https://*.paypal.com; "
+            "frame-src https://*.paypal.com; "
             "object-src 'none'; "
             "base-uri 'self'"
         )
