@@ -159,6 +159,23 @@ export async function startPayPalCheckout(tier: PaidTier, interval: BillingInter
   return handle(res);
 }
 
+// Card payment through the bank's ArCa gateway: one payment for the period,
+// no automatic renewal. Returns the bank's card page URL.
+export async function startBankCardCheckout(tier: PaidTier, interval: BillingInterval): Promise<{ url: string }> {
+  const res = await apiFetch(`${BASE}/billing/bank/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ tier, interval, source: "app" }),
+  });
+  return handle(res);
+}
+
+// Called on return from the bank's card page (?bank=1&orderId=...).
+export async function confirmBankCard(orderId: string): Promise<SubscriptionActivation> {
+  const res = await apiFetch(`${BASE}/billing/bank/order/${encodeURIComponent(orderId)}`);
+  return handle(res);
+}
+
 // Called on return from PayPal (?paypal=1&subscription_id=I-...).
 export async function confirmPayPal(subscriptionId: string): Promise<SubscriptionActivation> {
   const res = await apiFetch(`${BASE}/billing/paypal/subscription/${encodeURIComponent(subscriptionId)}`);

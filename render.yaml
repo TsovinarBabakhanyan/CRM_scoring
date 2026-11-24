@@ -53,6 +53,15 @@ services:
         sync: false
       - key: PAYPAL_WEBHOOK_ID
         sync: false
+      # Card payments via the acquiring bank (ACBA or Inecobank) on ArCa.
+      - key: ARCA_MODE
+        value: live
+      - key: ARCA_USERNAME
+        sync: false
+      - key: ARCA_PASSWORD
+        sync: false
+      - key: ARCA_GATEWAY_URL
+        sync: false
       - key: BILLING_CURRENCY
         value: USD
       - key: STOREFRONT_URL

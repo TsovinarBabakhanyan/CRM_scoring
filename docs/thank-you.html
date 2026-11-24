@@ -159,9 +159,11 @@
     var keyEl = document.getElementById("license-key");
     // Card checkout comes back with ?session_id=...; PayPal with
     // ?paypal=1&subscription_id=I-... .
+    // A bank card payment comes back with ?bank=1&orderId=... .
     var paypalId = params.get("paypal") ? params.get("subscription_id") : null;
-    var sessionId = params.get("session_id") || paypalId;
-    var confirmPath = paypalId ? "/billing/paypal/subscription/" : "/billing/session/";
+    var bankOrderId = params.get("bank") ? params.get("orderId") : null;
+    var sessionId = params.get("session_id") || paypalId || bankOrderId;
+    var confirmPath = bankOrderId ? "/billing/bank/order/" : paypalId ? "/billing/paypal/subscription/" : "/billing/session/";
     if (sessionId) {
       message.textContent = crmLang.t("ty.confirming");
       fetch(API_BASE + confirmPath + encodeURIComponent(sessionId), { headers: { "Accept-Language": crmLang.lang } }).then(function (res) {

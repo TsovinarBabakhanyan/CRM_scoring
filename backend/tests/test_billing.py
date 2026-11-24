@@ -204,7 +204,7 @@ def test_issue_and_deliver_only_emails_real_addresses(monkeypatch, tmp_path):
 
 
 def test_licensee_falls_back_to_the_subscription_id():
-    assert billing._licensee(_subscription(customer_email=None)) == "Stripe subscription sub_1"
+    assert billing._licensee(_subscription(customer_email=None)) == "Subscription sub_1"
 
 
 def test_fulfil_rejects_unknown_plan(stripe_stub):

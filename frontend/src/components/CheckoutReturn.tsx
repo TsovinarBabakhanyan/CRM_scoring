@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { confirmCheckout, confirmPayPal } from "../api";
+import { confirmBankCard, confirmCheckout, confirmPayPal } from "../api";
 import { useI18n } from "../i18n";
 import { TIER_LABEL } from "../plans";
 import type { SubscriptionActivation } from "../types";
@@ -9,26 +9,36 @@ type Phase =
   | { kind: "done"; result: SubscriptionActivation }
   | { kind: "failed"; message: string };
 
+type Return = { provider: "stripe" | "paypal" | "bank"; id: string };
+
 // Stripe comes back with ?checkout=<session id>; PayPal with
-// ?paypal=1&subscription_id=I-... (it adds its own ba_token/token too).
-function checkoutSessionFromUrl(): string | null {
+// ?paypal=1&subscription_id=I-... (it adds its own ba_token/token too); the
+// bank's card page with ?bank=1&orderId=... .
+function checkoutReturnFromUrl(): Return | null {
   const params = new URLSearchParams(window.location.search);
-  return params.get("checkout") ?? (params.get("paypal") ? params.get("subscription_id") : null);
+  const stripe = params.get("checkout");
+  if (stripe) return { provider: "stripe", id: stripe };
+  const paypal = params.get("paypal") ? params.get("subscription_id") : null;
+  if (paypal) return { provider: "paypal", id: paypal };
+  const bank = params.get("bank") ? params.get("orderId") : null;
+  return bank ? { provider: "bank", id: bank } : null;
 }
+
+const CONFIRM = { stripe: confirmCheckout, paypal: confirmPayPal, bank: confirmBankCard };
 
 // The buyer comes back to /?checkout=<session id> after paying. This
 // confirms the payment, shows the outcome (workspace upgraded, or the license
 // key for a self-hosted install) and then drops the id from the URL.
 export function CheckoutReturn({ onDone }: { onDone: () => void }) {
   const { t } = useI18n();
-  const [sessionId] = useState(checkoutSessionFromUrl);
+  const [checkoutReturn] = useState(checkoutReturnFromUrl);
   const [phase, setPhase] = useState<Phase>({ kind: "confirming" });
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!checkoutReturn) return;
     let cancelled = false;
-    (sessionId.startsWith("I-") ? confirmPayPal(sessionId) : confirmCheckout(sessionId)).then(
+    CONFIRM[checkoutReturn.provider](checkoutReturn.id).then(
       (result) => !cancelled && setPhase({ kind: "done", result }),
       (err) =>
         !cancelled &&
@@ -37,13 +47,13 @@ export function CheckoutReturn({ onDone }: { onDone: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, t]);
+  }, [checkoutReturn, t]);
 
-  if (!sessionId) return null;
+  if (!checkoutReturn) return null;
 
   function close() {
     const params = new URLSearchParams(window.location.search);
-    for (const name of ["checkout", "paypal", "subscription_id", "ba_token", "token"]) params.delete(name);
+    for (const name of ["checkout", "paypal", "subscription_id", "ba_token", "token", "bank", "orderId"]) params.delete(name);
     const query = params.toString();
     window.history.replaceState(null, "", window.location.pathname + (query ? `?${query}` : "") + window.location.hash);
     onDone();

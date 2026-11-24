@@ -147,6 +147,15 @@ PAYPAL_MODE = os.getenv("PAYPAL_MODE", "live").strip().lower()
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "").strip()
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "").strip()
 PAYPAL_WEBHOOK_ID = os.getenv("PAYPAL_WEBHOOK_ID", "").strip()
+# Card payments through an Armenian bank's ArCa gateway (internet acquiring
+# from ACBA, Inecobank, ...): buyers pay with any card, from any bank, and
+# the money lands in the seller's account at the acquiring bank. The API
+# login and password come from that bank; "test" or "live"; the gateway URL
+# only if the bank gives one other than ArCa's own.
+ARCA_USERNAME = os.getenv("ARCA_USERNAME", "").strip()
+ARCA_PASSWORD = os.getenv("ARCA_PASSWORD", "").strip()
+ARCA_MODE = os.getenv("ARCA_MODE", "live").strip().lower()
+ARCA_GATEWAY_URL = os.getenv("ARCA_GATEWAY_URL", "").strip()
 # Prices are decimal amounts in BILLING_CURRENCY. The matching Stripe price
 # is created on the first sale of each plan (found again by a lookup key that
 # includes the amount), so changing an amount only affects new subscriptions.

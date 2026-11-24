@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { startCheckout, startPayPalCheckout } from "../api";
+import { startBankCardCheckout, startCheckout, startPayPalCheckout } from "../api";
 import { useI18n } from "../i18n";
 import { TIER_LABEL } from "../plans";
 import type { BillingConfig, BillingInterval, PaidTier } from "../types";
@@ -21,10 +21,22 @@ function priceFor(config: BillingConfig, tier: PaidTier, interval: BillingInterv
 // details never touch our servers.
 export function Subscribe({ config, tier, interval, onClose }: Props) {
   const { t } = useI18n();
-  const [redirecting, setRedirecting] = useState<"card" | "paypal" | null>(null);
+  const [redirecting, setRedirecting] = useState<"card" | "bank" | "paypal" | null>(null);
   const [error, setError] = useState<string | null>(
-    config.checkout_available || config.paypal_available ? null : t("sub.notConfigured"),
+    config.checkout_available || config.paypal_available || config.bank_card_available ? null : t("sub.notConfigured"),
   );
+
+  async function payByBankCard() {
+    setRedirecting("bank");
+    setError(null);
+    try {
+      const { url } = await startBankCardCheckout(tier, interval);
+      window.location.assign(url);
+    } catch (err) {
+      setRedirecting(null);
+      setError(err instanceof Error ? err.message : t("sub.errStart"));
+    }
+  }
 
   async function payWithPayPal() {
     setRedirecting("paypal");
@@ -71,6 +83,19 @@ export function Subscribe({ config, tier, interval, onClose }: Props) {
       </div>
 
       {error && <p className="mt-3 text-hot">{error}</p>}
+      {config.bank_card_available && (
+        <>
+          <p className="mt-3 text-xs text-text/75">{t("sub.bankFine")}</p>
+          <button
+            type="button"
+            onClick={payByBankCard}
+            disabled={redirecting !== null}
+            className="mt-2 w-full max-w-sm rounded-md bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {redirecting === "bank" ? t("sub.openingBank") : t("sub.bankCard")}
+          </button>
+        </>
+      )}
       {config.checkout_available && (
         <button
           type="button"

@@ -268,6 +268,9 @@ export const en = {
   "purchase.noEmail": "Don't see the email in a minute or two? Check spam, or contact support with the email address you paid with.",
   "api.tooMany": "Too many attempts from your network. Please wait a while and try again.",
   "api.requestFailed": "Request failed",
+  "sub.bankCard": "Pay by card",
+  "sub.bankFine": "Visa, Mastercard or ArCa, from any bank. One payment for this period; it doesn't renew by itself.",
+  "sub.openingBank": "Opening the secure card page…",
   "sub.payPal": "Pay with PayPal",
   "sub.openingPayPal": "Opening PayPal…",
 } as const;

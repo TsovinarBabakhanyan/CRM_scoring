@@ -26,13 +26,17 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi import Path as PathParam
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from starlette.concurrency import run_in_threadpool
 
 from .. import storage
 from ..auth import get_current_tenant, get_optional_tenant
 from ..config import (
     APP_BASE_URL,
+    ARCA_GATEWAY_URL,
+    ARCA_MODE,
+    ARCA_PASSWORD,
+    ARCA_USERNAME,
     BILLING_CURRENCY,
     HOSTED_MODE,
     LICENSE_PRIVATE_KEY,
@@ -54,6 +58,7 @@ from ..config import (
 from ..middleware import limiter
 from ..services.license_email import send_license_email
 from ..i18n import request_lang
+from ..services.arca_billing import ArcaBilling, order_created_at
 from ..services.paypal_billing import PayPalBilling
 from ..services.stripe_billing import BillingError, StripeBilling
 
@@ -92,6 +97,16 @@ def _paypal() -> PayPalBilling:
     if not _paypal_configured():
         raise HTTPException(status_code=503, detail="PayPal isn't configured on this deployment.")
     return PayPalBilling(PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_MODE)
+
+
+def _bank_configured() -> bool:
+    return bool(ARCA_USERNAME and ARCA_PASSWORD)
+
+
+def _bank() -> ArcaBilling:
+    if not _bank_configured():
+        raise HTTPException(status_code=503, detail="Card payments aren't configured on this deployment.")
+    return ArcaBilling(ARCA_USERNAME, ARCA_PASSWORD, ARCA_MODE, ARCA_GATEWAY_URL)
 
 
 def _is_paypal(subscription_id: str) -> bool:
@@ -186,7 +201,7 @@ def _plan_of(subscription: dict) -> tuple[str, str] | None:
 
 def _licensee(subscription: dict) -> str:
     """Who the key is issued to: the buyer's email, else the subscription id."""
-    return subscription.get("customer_email") or f"Stripe subscription {subscription['id']}"
+    return subscription.get("customer_email") or f"Subscription {subscription['id']}"
 
 
 def _fulfil(subscription: dict) -> dict:
@@ -240,11 +255,17 @@ class CheckoutRequest(BaseModel):
     source: Literal["app", "site"] = "app"
 
 
+class BankCheckoutRequest(CheckoutRequest):
+    # Where the license key is emailed; the bank's card page doesn't ask.
+    email: EmailStr | None = None
+
+
 @router.get("/config")
 def billing_config():
     return {
         "checkout_available": _configured(),
         "paypal_available": _paypal_configured(),
+        "bank_card_available": _bank_configured(),
         "currency": BILLING_CURRENCY,
         "environment": "live" if STRIPE_SECRET_KEY.startswith(("sk_live_", "rk_live_")) else "test",
         "price_monthly": PRICE_PRO_MONTHLY or None,
@@ -391,6 +412,92 @@ def paypal_subscription(request: Request, subscription_id: str = PathParam(max_l
     if subscription["status"] != "active":
         raise HTTPException(status_code=409, detail="This payment isn't complete yet.")
     upgraded = _activate_workspace(subscription)
+    result = _fulfil(subscription)
+    if result["status"] == "duplicate" and result["license_key"]:
+        result["status"] = "ok"
+    return {**result, "workspace_upgraded": upgraded}
+
+
+@router.post("/bank/checkout")
+@limiter.limit(RATE_LIMIT_AUTH)
+def bank_checkout(
+    request: Request,
+    payload: BankCheckoutRequest,
+    tenant: storage.Tenant | None = Depends(get_optional_tenant),
+):
+    """Starts a card payment through the bank's ArCa gateway for one month
+    or one year of the plan; returns the bank's card page URL. The gateway
+    sends the buyer back with ?orderId=..., and the page they land on
+    confirms it through /bank/order/<id>."""
+    metadata = {"tier": payload.tier, "interval": payload.interval}
+    workspace = HOSTED_MODE and tenant is not None and tenant.id != storage.DEFAULT_TENANT_ID
+    if workspace:
+        metadata["tenant_id"] = tenant.id
+    if payload.source == "site":
+        return_url = f"{STOREFRONT_URL.rstrip('/')}/thank-you.html?bank=1"
+        fail_url = f"{STOREFRONT_URL.rstrip('/')}/?payment=failed#pricing"
+    else:
+        return_url = f"{APP_BASE_URL.rstrip('/')}/?bank=1"
+        fail_url = f"{APP_BASE_URL.rstrip('/')}/?payment=failed#plans"
+    email = str(payload.email) if payload.email else (tenant.email if workspace and tenant.email else None)
+    started = _call(
+        "start card payment",
+        _bank().create_order,
+        amount=_amount_cents(payload.tier, payload.interval),
+        currency=BILLING_CURRENCY,
+        description=f"{_PRODUCT_NAMES[payload.tier]} ({payload.interval})",
+        metadata=metadata,
+        return_url=return_url,
+        fail_url=fail_url,
+        email=email,
+        lang=request_lang(request),
+    )
+    return {"url": started["url"], "order_id": started["id"]}
+
+
+def _bank_order_view(order: dict) -> dict:
+    """A paid bank order in the subscription shape _fulfil works with: one
+    period, starting when the order was made, that never renews."""
+    metadata = order["metadata"]
+    started = order_created_at(order["order_number"])
+    interval = metadata.get("interval")
+    if started is None or interval not in _INTERVALS:
+        raise HTTPException(status_code=400, detail="This order isn't for a CRM Scoring plan.")
+    return {
+        "id": f"bank:{order['id']}",
+        "status": "active" if order["paid"] else "unpaid",
+        "customer_email": metadata.get("email") or None,
+        "metadata": {k: v for k, v in metadata.items() if k in ("tier", "interval", "tenant_id")},
+        "current_period_end": started + _validity_days(interval) * 86400,
+        "cancel_at_period_end": True,
+    }
+
+
+@router.get("/bank/order/{order_id}")
+@limiter.limit(RATE_LIMIT_AUTH)
+def bank_order(request: Request, order_id: str = PathParam(max_length=64, pattern=r"^[A-Za-z0-9-]+$")):
+    """Confirms a card payment and returns its license key (or that the
+    workspace was upgraded until the paid period ends). A reload shows the
+    same key again."""
+    order = _call("look up the card payment", _bank().get_order, order_id)
+    if not order["paid"]:
+        raise HTTPException(status_code=409, detail="This payment isn't complete yet.")
+    subscription = _bank_order_view(order)
+    # Check the amount too, so an order registered some other way for less
+    # can't unlock a plan.
+    plan = _plan_of(subscription)
+    if plan is None or order.get("amount") != _amount_cents(*plan):
+        logger.error("Bank order {} doesn't match a CRM Scoring price.", order_id)
+        raise HTTPException(status_code=400, detail="This order isn't for a CRM Scoring plan.")
+
+    tenant_id = subscription["metadata"].get("tenant_id")
+    upgraded = bool(HOSTED_MODE and tenant_id)
+    if upgraded:
+        # Nothing renews: the workspace gets the plan until the paid period
+        # ends, with no subscription left on it to cancel. Re-running this
+        # (a reload) just sets the same end date again.
+        storage.set_tenant_subscription(tenant_id, plan[0], subscription["id"])
+        storage.end_tenant_subscription(subscription["id"], subscription["current_period_end"])
     result = _fulfil(subscription)
     if result["status"] == "duplicate" and result["license_key"]:
         result["status"] = "ok"

@@ -57,6 +57,8 @@ export interface BillingConfig {
   checkout_available: boolean;
   // PayPal subscriptions are offered too (next to card checkout).
   paypal_available?: boolean;
+  // Card payment through the bank (any Visa, Mastercard or ArCa card); one-off, no renewal.
+  bank_card_available?: boolean;
   currency?: string;
   // "test" while the deployment uses a Stripe test-mode key (no real charges).
   environment: "test" | "live";

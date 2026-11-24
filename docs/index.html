@@ -238,6 +238,8 @@
   .checkout .key { display: block; word-break: break-all; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; background: var(--accent-bg); color: var(--text-h); padding: 8px 10px; border-radius: 6px; margin: 8px 0; }
   .checkout .error { color: var(--hot); font-size: 0.85rem; }
   .checkout .paypal-alt { margin-top: 6px; }
+  .checkout #bank-checkout:not([hidden]) ~ #card-checkout:not([hidden]),
+  .checkout #bank-checkout:not([hidden]) ~ .paypal-alt { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
   .checkout #card-checkout:not([hidden]) ~ .paypal-alt { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
   .checkout .paypal-alt .fine { margin: 0 0 10px; }
   .checkout .paypal-api {
@@ -402,6 +404,14 @@
           <h3 id="checkout-title">Subscribe</h3>
           <button type="button" class="link-btn" id="checkout-cancel" onclick="closeCheckout()" data-i18n="common.cancel">Cancel</button>
         </div>
+        <!-- Card payment through the bank (any Visa, Mastercard or ArCa card) appears once the server says it's switched on. -->
+        <div id="bank-checkout" hidden>
+          <p class="fine" data-i18n="bank.fine">Pay by card — Visa, Mastercard or ArCa, from any bank. One payment for the period you picked; it doesn't renew by itself. Your license key is shown and emailed right after.</p>
+          <label><span data-i18n="bank.email">Email for your license key</span>
+            <input type="email" id="bank-email" autocomplete="email" placeholder="you@company.com" />
+          </label>
+          <button type="button" id="bank-pay" class="btn btn-primary" style="width:100%; font: inherit;" onclick="payByBankCard()" data-i18n="bank.pay">Pay by card</button>
+        </div>
         <!-- Card checkout only appears once the server says it's switched on. -->
         <div id="card-checkout" hidden>
           <p class="fine" id="checkout-fine" data-i18n="checkout.cardFine">Billed by card. You'll enter your card on a secure payment page; your license key is shown and emailed right after.</p>
@@ -457,6 +467,11 @@
     var I18N = {
       en: {
         "paypal.api": "Pay with PayPal",
+        "bank.fine": "Pay by card — Visa, Mastercard or ArCa, from any bank. One payment for the period you picked; it doesn't renew by itself. Your license key is shown and emailed right after.",
+        "bank.email": "Email for your license key",
+        "bank.pay": "Pay by card",
+        "bank.opening": "Opening the secure card page…",
+        "bank.failed": "The card payment didn't go through, so nothing was charged. You can try again or pick another way to pay.",
         "paypal.opening": "Opening PayPal…",
         "paypal.introApi": "Pay with PayPal. It renews automatically and you can cancel any time; your license key is shown right after.",
         "paypal.introApiOr": "Or pay with PayPal. It renews automatically and you can cancel any time; your license key is shown right after.",
@@ -521,6 +536,11 @@
       },
       ru: {
         "paypal.api": "Оплатить через PayPal",
+        "bank.fine": "Оплата картой — Visa, Mastercard или ArCa любого банка. Один платёж за выбранный период, без автоматического продления. Ключ лицензии показывается и приходит на почту сразу после оплаты.",
+        "bank.email": "Почта для ключа лицензии",
+        "bank.pay": "Оплатить картой",
+        "bank.opening": "Открываем защищённую страницу оплаты…",
+        "bank.failed": "Оплата картой не прошла, деньги не списаны. Попробуйте ещё раз или выберите другой способ оплаты.",
         "paypal.opening": "Открываем PayPal…",
         "paypal.introApi": "Оплатите через PayPal. Подписка продлевается автоматически, отменить можно в любой момент; ключ лицензии показывается сразу после оплаты.",
         "paypal.introApiOr": "Или оплатите через PayPal. Подписка продлевается автоматически, отменить можно в любой момент; ключ лицензии показывается сразу после оплаты.",
@@ -585,6 +605,11 @@
       },
       hy: {
         "paypal.api": "Վճարել PayPal-ով",
+        "bank.fine": "Վճարեք քարտով՝ Visa, Mastercard կամ ArCa, ցանկացած բանկի։ Մեկ վճարում ընտրված ժամանակահատվածի համար, առանց ավտոմատ երկարաձգման։ Լիցենզիայի բանալին ցույց է տրվում և ուղարկվում էլ. փոստով անմիջապես վճարումից հետո։",
+        "bank.email": "Էլ. հասցե լիցենզիայի բանալու համար",
+        "bank.pay": "Վճարել քարտով",
+        "bank.opening": "Բացվում է անվտանգ վճարման էջը…",
+        "bank.failed": "Քարտով վճարումը չանցավ, գումար չի գանձվել։ Փորձեք կրկին կամ ընտրեք վճարման այլ եղանակ։",
         "paypal.opening": "Բացվում է PayPal-ը…",
         "paypal.introApi": "Վճարեք PayPal-ով։ Բաժանորդագրությունը երկարաձգվում է ավտոմատ, և կարող եք չեղարկել ցանկացած պահի․ լիցենզիայի բանալին ցույց է տրվում անմիջապես վճարումից հետո։",
         "paypal.introApiOr": "Կամ վճարեք PayPal-ով։ Բաժանորդագրությունը երկարաձգվում է ավտոմատ, և կարող եք չեղարկել ցանկացած պահի․ լիցենզիայի բանալին ցույց է տրվում անմիջապես վճարումից հետո։",
@@ -774,6 +799,9 @@
       // server says it's switched on.
       var plan = checkoutPlan;
       $("card-checkout").hidden = true;
+      $("bank-checkout").hidden = true;
+      $("bank-pay").disabled = false;
+      $("bank-pay").textContent = t("bank.pay");
       $("paypal-alt").hidden = false;
       $("paypal-api").disabled = false;
       $("paypal-api").textContent = t("paypal.api");
@@ -781,10 +809,12 @@
       api("/billing/config").then(function (config) {
         if (checkoutPlan !== plan) return;
         var cardToo = !!config.checkout_available;
+        var bankToo = !!config.bank_card_available;
+        $("bank-checkout").hidden = !bankToo;
         $("card-checkout").hidden = !cardToo;
         $("paypal-alt").hidden = !config.paypal_available;
-        $("paypal-intro").textContent = t(cardToo ? "paypal.introApiOr" : "paypal.introApi");
-        if (!config.paypal_available && !cardToo) formError(t("checkout.unavailable"));
+        $("paypal-intro").textContent = t(cardToo || bankToo ? "paypal.introApiOr" : "paypal.introApi");
+        if (!config.paypal_available && !cardToo && !bankToo) formError(t("checkout.unavailable"));
       }, function () {});
     }
     function payWithPayPal() {
@@ -801,6 +831,27 @@
       }, function (err) {
         $("paypal-api").disabled = false;
         $("paypal-api").textContent = t("paypal.api");
+        formError(err.message);
+      });
+    }
+    function payByBankCard() {
+      if (!checkoutPlan) return;
+      formError("");
+      var email = $("bank-email").value.trim();
+      if (email && !$("bank-email").checkValidity()) { $("bank-email").reportValidity(); return; }
+      $("bank-pay").disabled = true;
+      $("bank-pay").textContent = t("bank.opening");
+      var body = { tier: checkoutPlan.tier, interval: checkoutPlan.interval, source: "site" };
+      if (email) body.email = email;
+      api("/billing/bank/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }).then(function (result) {
+        window.location.href = result.url;
+      }, function (err) {
+        $("bank-pay").disabled = false;
+        $("bank-pay").textContent = t("bank.pay");
         formError(err.message);
       });
     }
@@ -823,6 +874,16 @@
     }
     applyLanguage();
     selectInterval("monthly");
+    // The bank's card page sends a failed or cancelled payment back here.
+    if (new URLSearchParams(window.location.search).get("payment") === "failed") {
+      $("checkout").hidden = false;
+      $("checkout-title").textContent = "";
+      $("checkout-cancel").hidden = false;
+      $("bank-checkout").hidden = true;
+      $("card-checkout").hidden = true;
+      $("paypal-alt").hidden = true;
+      formError(t("bank.failed"));
+    }
   </script>
 </body>
 </html>
