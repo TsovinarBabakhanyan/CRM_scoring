@@ -345,10 +345,10 @@
 
       <!-- Three real tiers. Starter has no price at all -- it's the
            unlicensed default (app/licensing.py), permanently capped at
-           TRIAL_MAX_UPLOADS/TRIAL_MAX_LEADS_PER_UPLOAD. Pro and Advanced are
-           functionally identical (no extra caps/features on Advanced yet) --
-           Advanced is priced higher for agency/multi-client framing only;
-           see backend/app/routers/billing.py's _tier_for_plan. -->
+           TRIAL_MAX_UPLOADS/TRIAL_MAX_LEADS_PER_UPLOAD. Advanced has everything
+           in Pro, plus separate client workspaces with their own logins on a
+           self-hosted install (only an Advanced license allows signups there;
+           see backend/app/routers/accounts.py's signup). -->
       <div class="plans">
         <div class="plan">
           <h3 class="plan-name">Starter</h3>
@@ -381,10 +381,10 @@
           <div class="price" id="price-advanced">…</div>
           <p class="note" data-i18n="plan.unlimited">Unlimited uploads, billed per your plan.</p>
           <ul class="features">
-            <li data-i18n="feat.scoring">Hybrid rule + Claude lead scoring</li>
-            <li data-i18n="feat.ranking">Hot / Warm / Cold ranking with rationale</li>
-            <li data-i18n="feat.salesforce">One-click Salesforce push</li>
-            <li data-i18n="feat.slack">Slack alerts the moment a lead goes hot</li>
+            <li data-i18n-html="feat.everythingPro"><strong>Everything in Pro</strong>, plus:</li>
+            <li data-i18n="feat.clientWorkspaces">A separate workspace for each client — their leads never mix</li>
+            <li data-i18n="feat.clientLogins">Clients get their own login to see their own scores</li>
+            <li data-i18n="feat.selfHostedAgency">Run it on your own server for all your clients under one license</li>
           </ul>
           <button class="btn btn-secondary" style="width:100%; text-align:center; display:block; font: inherit;" onclick="buyPlan('advanced')" data-i18n="plan.subscribe">Subscribe</button>
         </div>
@@ -515,6 +515,10 @@
         "feat.ranking": "Hot / Warm / Cold ranking with rationale",
         "feat.salesforce": "One-click Salesforce push",
         "feat.slack": "Slack alerts the moment a lead goes hot",
+        "feat.everythingPro": "<strong>Everything in Pro</strong>, plus:",
+        "feat.clientWorkspaces": "A separate workspace for each client — their leads never mix",
+        "feat.clientLogins": "Clients get their own login to see their own scores",
+        "feat.selfHostedAgency": "Run it on your own server for all your clients under one license",
         "trial.title": "Try CRM Scoring free",
         "trial.fine": "Your own private workspace — no card, no signup. Includes 10 uploads of up to 10 leads each. Upgrade to Pro or Advanced any time from inside the app.",
         "trial.start": "Start free trial",
@@ -584,6 +588,10 @@
         "feat.ranking": "Горячие / тёплые / холодные с обоснованием",
         "feat.salesforce": "Отправка в Salesforce в один клик",
         "feat.slack": "Уведомления в Slack, как только лид становится горячим",
+        "feat.everythingPro": "<strong>Всё из Pro</strong>, а также:",
+        "feat.clientWorkspaces": "Отдельное рабочее пространство для каждого клиента — лиды не смешиваются",
+        "feat.clientLogins": "У клиентов свой вход, где они видят только свои оценки",
+        "feat.selfHostedAgency": "Запускайте на своём сервере для всех клиентов по одной лицензии",
         "trial.title": "Попробуйте CRM Scoring бесплатно",
         "trial.fine": "Ваше личное рабочее пространство — без карты и регистрации. 10 загрузок до 10 лидов в каждой. Перейти на Pro или Advanced можно в любой момент прямо в приложении.",
         "trial.start": "Начать бесплатно",
@@ -653,6 +661,10 @@
         "feat.ranking": "Թեժ / տաք / սառը դասակարգում՝ հիմնավորմամբ",
         "feat.salesforce": "Մեկ սեղմումով ուղարկում Salesforce",
         "feat.slack": "Slack ծանուցումներ, հենց որ լիդը թեժանում է",
+        "feat.everythingPro": "<strong>Pro-ի ամեն ինչը</strong>, և նաև՝",
+        "feat.clientWorkspaces": "Առանձին աշխատանքային տարածք յուրաքանչյուր հաճախորդի համար՝ լիդերը չեն խառնվում",
+        "feat.clientLogins": "Հաճախորդներն ունեն իրենց մուտքը՝ տեսնելու միայն իրենց գնահատականները",
+        "feat.selfHostedAgency": "Գործարկեք ձեր սերվերում բոլոր հաճախորդների համար՝ մեկ լիցենզիայով",
         "trial.title": "Փորձեք CRM Scoring-ը անվճար",
         "trial.fine": "Ձեր անձնական աշխատանքային տարածքը՝ առանց քարտի և գրանցման։ 10 վերբեռնում՝ յուրաքանչյուրում մինչև 10 լիդ։ Pro կամ Advanced պլանին կարող եք անցնել ցանկացած պահի հենց հավելվածից։",
         "trial.start": "Սկսել անվճար փորձաշրջանը",
