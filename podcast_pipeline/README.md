@@ -24,7 +24,42 @@ brew install ffmpeg
 
 The first transcription downloads the Whisper model (a few hundred MB).
 
-## 1. Record
+## 1a. No recording: use an AI voice
+
+The scripts can be read by Microsoft Azure's natural voices, Armenian
+included (Anahit, female, or Hayk, male). No microphone, no face.
+
+**Get a free key (once, about 5 minutes):**
+
+1. Go to **portal.azure.com** and sign in (or create a free Microsoft account).
+2. Search for **Speech service** → **Create**.
+3. Fill in: any **Resource group** name (e.g. `podcast`), **Region** `West Europe`,
+   any **Name** (e.g. `crmscoring-voice`), **Pricing tier** `Free F0`.
+   → **Review + create** → **Create**.
+4. When it's ready: **Go to resource** → **Keys and Endpoint**. Copy **KEY 1** and the **Location/Region**.
+5. Add them to the `.env` file in the project folder (it's never uploaded to GitHub):
+
+   ```
+   AZURE_SPEECH_KEY=paste-key-1-here
+   AZURE_SPEECH_REGION=westeurope
+   ```
+
+The free tier reads 500,000 characters a month; one episode is about 4,000.
+
+**Make the voice track:**
+
+```bash
+.venv/bin/python podcast_pipeline/make_voice.py podcast_pipeline/scripts/ep01-which-leads-to-call-first.hy.md
+.venv/bin/python podcast_pipeline/make_voice.py podcast_pipeline/scripts/ep01-which-leads-to-call-first.ru.md --voice male
+```
+
+It prints the exact `process_episode.py` command to run next. `--voice male`
+picks the male voice, `--rate -10%` reads slower. The ✂️ part of the script
+becomes the reel automatically, and the show notes say the episode is read
+by an AI voice. `--engine say` makes a free robotic preview with the Mac's
+own voices (English and Russian only).
+
+## 1b. Or record yourself
 
 Scripts to read are in [scripts/](scripts), e.g. episode 1 in
 [English](scripts/ep01-which-leads-to-call-first.en.md),
@@ -76,8 +111,8 @@ Re-running `process_episode.py` keeps these edits.
 ## 3. Reels (optional)
 
 ```bash
-# audio over the show cover
-.venv/bin/python podcast_pipeline/make_reel.py ep01-which-leads-to-call-first-en --start 2:05 --end 2:50
+# audio over the show cover; without --start/--end it uses the script's ✂️ part
+.venv/bin/python podcast_pipeline/make_reel.py ep01-which-leads-to-call-first-en
 
 # from your video recording
 .venv/bin/python podcast_pipeline/make_reel.py ep01-which-leads-to-call-first-en \

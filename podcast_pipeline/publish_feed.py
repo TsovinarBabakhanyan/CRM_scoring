@@ -55,6 +55,7 @@ TEXT = {
         "cta_button": "Try it free", "template": "Get the lead scoring template",
         "listen": "Listen", "subscribe": "Subscribe (RSS)", "soon": "The first episode is coming soon.",
         "heading": "Podcast", "tab": "English",
+        "ai_voice": "This episode is read by an AI voice.",
     },
     "ru": {
         "chapters": "В выпуске", "links": "Упоминается", "transcript": "Расшифровка",
@@ -63,6 +64,7 @@ TEXT = {
         "cta_button": "Попробовать бесплатно", "template": "Шаблон скоринга лидов",
         "listen": "Слушать", "subscribe": "Подписаться (RSS)", "soon": "Первый выпуск скоро.",
         "heading": "Подкаст", "tab": "Русский",
+        "ai_voice": "Этот выпуск озвучен голосом ИИ.",
     },
     "hy": {
         "chapters": "Այս թողարկումում", "links": "Հիշատակված", "transcript": "Տեքստը",
@@ -71,6 +73,7 @@ TEXT = {
         "cta_button": "Փորձել անվճար", "template": "Լիդերի գնահատման ձևանմուշ",
         "listen": "Լսել", "subscribe": "Բաժանորդագրվել (RSS)", "soon": "Առաջին թողարկումը շուտով։",
         "heading": "Փոդքասթ", "tab": "Հայերեն",
+        "ai_voice": "Այս թողարկումը կարդում է արհեստական բանականության ձայնը։",
     },
 }
 
@@ -98,6 +101,8 @@ def show_notes_md(cfg: dict, episode: dict) -> str:
     t = TEXT[episode["lang"]]
     try_url, template_url = cta_links(cfg, episode["lang"])
     lines = [f"# {episode['title']}", "", episode.get("summary", "").strip(), ""]
+    if episode.get("ai_voice"):
+        lines += [f"*{t['ai_voice']}*", ""]
     if episode.get("chapters"):
         lines += [f"## {t['chapters']}", ""]
         lines += [f"- {c['time']} — {c['title']}" for c in episode["chapters"]]
@@ -123,6 +128,8 @@ def show_notes_html(cfg: dict, episode: dict) -> str:
     e = html.escape
     try_url, template_url = cta_links(cfg, episode["lang"])
     parts = [f"<p>{e(episode.get('summary', '').strip())}</p>"]
+    if episode.get("ai_voice"):
+        parts.append(f"<p><em>{e(t['ai_voice'])}</em></p>")
     if episode.get("chapters"):
         items = "".join(f"<li>{e(c['time'])} — {e(c['title'])}</li>" for c in episode["chapters"])
         parts.append(f"<p><strong>{e(t['chapters'])}</strong></p><ul>{items}</ul>")

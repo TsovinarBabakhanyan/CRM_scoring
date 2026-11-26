@@ -15,6 +15,7 @@ import make_reel  # noqa: E402
 import process_episode  # noqa: E402
 import publish_feed  # noqa: E402
 
+ROOT_SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 ITUNES = "{http://www.itunes.com/dtds/podcast-1.0.dtd}"
 
 
@@ -143,3 +144,39 @@ def test_publish_finds_audio_already_on_the_site(site):
     (publish_feed.EPISODES / "ep01" / "ep01.mp3").unlink()
     publish_feed.publish(dt.date(2026, 11, 26), out)  # no error: the published copy is used
     assert (out / "audio" / "ep01.mp3").exists()
+
+
+import make_voice  # noqa: E402
+
+
+def test_parse_script_reads_title_slug_paragraphs_and_reel():
+    text = (ROOT_SCRIPTS / "ep01-which-leads-to-call-first.ru.md").read_text(encoding="utf-8")
+    script = make_voice.parse_script(text)
+    assert script["title"] == "Кому звонить первым?"
+    assert script["slug"] == "ep01-which-leads-to-call-first-ru"
+    assert script["paragraphs"][0] == "Здравствуйте! Это подкаст CRM Scoring."
+    assert not any("*" in p or "[" in p or "✂" in p for p in script["paragraphs"])
+    first, last = script["reel"]
+    assert script["paragraphs"][first].startswith("Вот простой способ")
+    assert script["paragraphs"][last].startswith("Идеально не будет")
+
+
+def test_parse_script_all_languages_drop_the_host_name():
+    for lang, opening in [("en", "Hi, and welcome to the CRM Scoring podcast."),
+                          ("hy", "Բարև ձեզ։ Սա CRM Scoring փոդքասթն է։")]:
+        script = make_voice.parse_script(
+            (ROOT_SCRIPTS / f"ep01-which-leads-to-call-first.{lang}.md").read_text(encoding="utf-8"))
+        assert script["paragraphs"][0] == opening
+        assert script["reel"] is not None
+
+
+def test_ssml_escapes_text():
+    assert "&lt;b&gt; &amp;" in make_voice.ssml("<b> &", "hy", "hy-AM-AnahitNeural", "-5%")
+    assert 'xml:lang="hy-AM"' in make_voice.ssml("x", "hy", "hy-AM-AnahitNeural", "0%")
+
+
+def test_ai_voice_is_disclosed_in_show_notes():
+    cfg = {"site": "https://www.crmscoring.com"}
+    ep = {"title": "T", "lang": "hy", "summary": "S", "ai_voice": True}
+    assert "արհեստական բանականության ձայնը" in publish_feed.show_notes_md(cfg, ep)
+    assert "<em>" in publish_feed.show_notes_html(cfg, ep)

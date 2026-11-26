@@ -126,8 +126,8 @@ def build_filter(base: str, caption_count: int, captions: list[dict], y: int) ->
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("slug", help="episode id (folder in podcast_pipeline/episodes)")
-    parser.add_argument("--start", required=True, help="clip start, e.g. 65 or 1:05")
-    parser.add_argument("--end", required=True, help="clip end, e.g. 110 or 1:50")
+    parser.add_argument("--start", help="clip start, e.g. 65 or 1:05 (default: the script's ✂️ part)")
+    parser.add_argument("--end", help="clip end, e.g. 110 or 1:50")
     parser.add_argument("--video", type=Path, help="video recording of the episode (default: audio over --image)")
     parser.add_argument("--image", type=Path, help="still picture for audio-only reels (default: show cover)")
     parser.add_argument("--audio", type=Path, help="sound for the reel (default: the episode's normalised MP3)")
@@ -140,13 +140,18 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--out", type=Path)
     args = parser.parse_args(argv)
 
-    start, end = parse_time(args.start), parse_time(args.end)
+    episode = load_episode(args.slug)
+    if args.start and args.end:
+        start, end = parse_time(args.start), parse_time(args.end)
+    elif episode.get("reel"):
+        start, end = episode["reel"]["start"], episode["reel"]["end"]
+    else:
+        raise SystemExit("Pass --start and --end (this episode has no ✂️ reel part marked).")
     if end <= start:
         raise SystemExit("--end must be after --start")
     if end - start > 180:
         raise SystemExit("Reels can be at most 3 minutes; pick a shorter window.")
 
-    episode = load_episode(args.slug)
     folder = episode_dir(args.slug)
     audio = args.audio or folder / episode["audio"]
     out = args.out or folder / "reels" / f"{args.slug}-{int(start)}-{int(end)}.mp4"

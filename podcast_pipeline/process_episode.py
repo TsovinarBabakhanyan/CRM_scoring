@@ -152,6 +152,12 @@ def main(argv: list[str] | None = None) -> None:
         transcript = "\n".join(s["text"] for s in segments) + "\n"
         (folder / f"{slug}.txt").write_text(transcript, encoding="utf-8")
 
+    # Made with make_voice.py? Its notes (reel window, AI voice) sit next to the audio.
+    voice_notes = {}
+    sidecar = args.recording.with_suffix(".json")
+    if sidecar.exists():
+        voice_notes = json.loads(sidecar.read_text(encoding="utf-8"))
+
     old = {}
     if (folder / "episode.json").exists():
         old = json.loads((folder / "episode.json").read_text(encoding="utf-8"))
@@ -164,6 +170,8 @@ def main(argv: list[str] | None = None) -> None:
         "summary": old.get("summary") or first_sentences(transcript or ""),
         "chapters": old.get("chapters", []),
         "links": old.get("links", []),
+        "reel": old.get("reel") or voice_notes.get("reel"),
+        "ai_voice": bool(voice_notes.get("ai_voice") or old.get("ai_voice")),
         "duration": round(probe_duration(mp3), 2),
         "bytes": mp3.stat().st_size,
         "audio": mp3.name,
