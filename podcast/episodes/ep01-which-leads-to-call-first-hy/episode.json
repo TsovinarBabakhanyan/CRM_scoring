@@ -1,0 +1,53 @@
+{
+  "slug": "ep01-which-leads-to-call-first-hy",
+  "title": "Ո՞ւմ զանգել առաջինը",
+  "lang": "hy",
+  "date": "2026-11-26",
+  "summary": "Լիդերը շատ են, ժամանակը՝ քիչ։ Ո՞ւմ զանգել առաջինը։ Պարզ ձև՝ յուրաքանչյուր լիդ գնահատելու ըստ համապատասխանության և հետաքրքրության, բաժանելու թեժ, տաք և սառը խմբերի, և 100 միավորանոց աղյուսակ, որով կարող եք սկսել վաղը։ Նաև երեք սխալ, որոնց պատճառով մենեջերները դադարում են վստահել գնահատականին։",
+  "chapters": [
+    {
+      "time": "0:00",
+      "title": "Լիդերը շատ են, ժամանակը՝ քիչ"
+    },
+    {
+      "time": "0:45",
+      "title": "Համապատասխանություն և հետաքրքրություն"
+    },
+    {
+      "time": "1:35",
+      "title": "Թեժ, տաք և սառը"
+    },
+    {
+      "time": "2:08",
+      "title": "100 միավորանոց աղյուսակ"
+    },
+    {
+      "time": "2:56",
+      "title": "Երեք սխալ"
+    },
+    {
+      "time": "3:31",
+      "title": "Ինչու բացատրել գնահատականը"
+    }
+  ],
+  "links": [
+    {
+      "title": "Լիդերի գնահատման անվճար ձևանմուշ",
+      "url": "https://www.crmscoring.com/hy/lead-scoring-template.html"
+    },
+    {
+      "title": "AI լիդերի գնահատում՝ բացատրությամբ",
+      "url": "https://www.crmscoring.com/hy/ai-lead-scoring.html"
+    }
+  ],
+  "reel": {
+    "start": 128.02,
+    "end": 176.07
+  },
+  "ai_voice": true,
+  "duration": 260.61,
+  "bytes": 3128156,
+  "audio": "ep01-which-leads-to-call-first-hy.mp3",
+  "srt": "ep01-which-leads-to-call-first-hy.srt",
+  "transcript": "ep01-which-leads-to-call-first-hy.txt"
+}

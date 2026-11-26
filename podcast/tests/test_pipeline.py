@@ -118,7 +118,7 @@ def test_publish_writes_valid_feeds_per_language(site):
     item = items[0]
     assert item.find("title").text == "Title ep01 & more"
     enclosure = item.find("enclosure")
-    assert enclosure.get("url") == "https://www.crmscoring.com/podcast/audio/ep01.mp3"
+    assert enclosure.get("url") == publish_feed.settings()["feed_url"] + "audio/ep01.mp3"
     assert enclosure.get("length") == "1234" and enclosure.get("type") == "audio/mpeg"
     assert item.find(f"{ITUNES}duration").text == "754"
     assert item.find("pubDate").text == "Fri, 20 Nov 2026 09:00:00 +0400"
@@ -183,3 +183,15 @@ def test_publish_with_no_episodes_writes_nothing(site):
     out, _add = site
     assert publish_feed.publish(dt.date(2026, 11, 26), out) == {}
     assert not out.exists()
+
+
+def test_align_script_uses_the_exact_words_in_order():
+    cues, ws = common.align_script([
+        {"start": 0.0, "end": 4.0, "text": "Բարև ձեզ։ Սա փոդքասթ է։"},
+        {"start": 4.6, "end": 6.0, "text": "Hot leads first."},
+    ])
+    assert [c["text"] for c in cues] == ["Բարև ձեզ։", "Սա փոդքասթ է։", "Hot leads first."]
+    assert [w["word"] for w in ws] == ["Բարև", "ձեզ։", "Սա", "փոդքասթ", "է։", "Hot", "leads", "first."]
+    assert cues[0]["start"] == 0.0 and cues[1]["end"] == pytest.approx(4.0)
+    assert ws[5]["start"] == pytest.approx(4.6) and ws[-1]["end"] == pytest.approx(6.0)
+    assert all(a["end"] <= b["start"] + 1e-6 for a, b in zip(ws, ws[1:]))

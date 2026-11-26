@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import LANGUAGES, episode_dir, probe_duration, require, run, save_episode, to_srt  # noqa: E402
+from common import LANGUAGES, align_script, episode_dir, probe_duration, require, run, save_episode, to_srt  # noqa: E402
 
 TARGET_LUFS = -16.0
 TRUE_PEAK = -1.5
@@ -130,6 +130,8 @@ def main(argv: list[str] | None = None) -> None:
                              "use medium or large-v3 for Armenian)")
     parser.add_argument("--stereo", action="store_true", help="keep stereo (default: mono, best for speech)")
     parser.add_argument("--skip-transcript", action="store_true")
+    parser.add_argument("--whisper", action="store_true",
+                        help="transcribe with Whisper even when the episode was read from a script")
     args = parser.parse_args(argv)
 
     if not args.recording.exists():
@@ -143,20 +145,25 @@ def main(argv: list[str] | None = None) -> None:
     measured = normalise(args.recording, mp3, mono=not args.stereo)
     print(f"    was {measured['input_i']} LUFS, true peak {measured['input_tp']} dBTP")
 
-    transcript = None
-    if not args.skip_transcript:
-        print(f"2/2 Transcribing ({args.lang}, model {args.model}) ...")
-        segments, words = transcribe(args.recording, args.lang, args.model)
-        (folder / f"{slug}.srt").write_text(to_srt(segments), encoding="utf-8")
-        (folder / f"{slug}.words.json").write_text(json.dumps(words, ensure_ascii=False, indent=1), encoding="utf-8")
-        transcript = "\n".join(s["text"] for s in segments) + "\n"
-        (folder / f"{slug}.txt").write_text(transcript, encoding="utf-8")
-
-    # Made with make_voice.py? Its notes (reel window, AI voice) sit next to the audio.
+    # Made with make_voice.py? Its notes (paragraph timings, reel window,
+    # AI voice) sit next to the audio.
     voice_notes = {}
     sidecar = args.recording.with_suffix(".json")
     if sidecar.exists():
         voice_notes = json.loads(sidecar.read_text(encoding="utf-8"))
+
+    transcript = None
+    if not args.skip_transcript:
+        if voice_notes.get("segments") and not args.whisper:
+            print("2/2 Transcript from the script (exact words, no speech recognition)")
+            segments, words = align_script(voice_notes["segments"])
+        else:
+            print(f"2/2 Transcribing ({args.lang}, model {args.model}) ...")
+            segments, words = transcribe(args.recording, args.lang, args.model)
+        (folder / f"{slug}.srt").write_text(to_srt(segments), encoding="utf-8")
+        (folder / f"{slug}.words.json").write_text(json.dumps(words, ensure_ascii=False, indent=1), encoding="utf-8")
+        transcript = "\n".join(s["text"] for s in segments) + "\n"
+        (folder / f"{slug}.txt").write_text(transcript, encoding="utf-8")
 
     old = {}
     if (folder / "episode.json").exists():

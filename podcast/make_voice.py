@@ -179,6 +179,12 @@ def main(argv: list[str] | None = None) -> None:
 
     sidecar = {"title": script["title"], "lang": lang, "voice": voice if args.engine == "azure" else "mac",
                "ai_voice": True}
+    # When each paragraph is spoken: process_episode.py turns this and the
+    # script's words into an exact transcript, no speech recognition needed.
+    sidecar["segments"] = [
+        {"start": round(starts[i], 3), "end": round(starts[i + 1] - PAUSE, 3), "text": paragraph}
+        for i, paragraph in enumerate(script["paragraphs"])
+    ]
     if script["reel"]:
         first, last = script["reel"]
         sidecar["reel"] = {"start": round(starts[first], 2), "end": round(starts[last + 1] - PAUSE, 2)}

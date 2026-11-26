@@ -84,6 +84,37 @@ def to_srt(cues: list[dict]) -> str:
     return "\n".join(blocks)
 
 
+def align_script(segments: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Exact transcript for an episode read from a script.
+
+    segments: [{"start", "end", "text"}] per paragraph, as make_voice.py
+    timed them. Each paragraph is split into sentences and words, and its
+    time shared out in proportion to their length -- a reading voice keeps
+    an even pace, so this is close enough for captions, and the words are
+    exactly the script's. Returns (cues, words) like a transcription.
+    """
+    import re
+
+    cues, words = [], []
+    for seg in segments:
+        sentences = [s for s in re.split(r"(?<=[.!?…։])\s+", seg["text"].strip()) if s]
+        total = sum(len(s) + 1 for s in sentences) or 1
+        t = seg["start"]
+        span = seg["end"] - seg["start"]
+        for sentence in sentences:
+            length = span * (len(sentence) + 1) / total
+            cues.append({"start": round(t, 3), "end": round(t + length, 3), "text": sentence})
+            tokens = sentence.split()
+            weight = sum(len(w) + 1 for w in tokens) or 1
+            wt = t
+            for token in tokens:
+                dur = length * (len(token) + 1) / weight
+                words.append({"start": round(wt, 3), "end": round(wt + dur, 3), "word": token})
+                wt += dur
+            t += length
+    return cues, words
+
+
 def caption_chunks(words: list[dict], start: float = 0.0, end: float | None = None,
                    max_words: int = 4, max_chars: int = 22, max_gap: float = 0.6) -> list[dict]:
     """Groups word timestamps into short on-screen captions for a clip.
