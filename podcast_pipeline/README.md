@@ -1,8 +1,9 @@
 # Podcast
 
-Record an episode, run three commands, push. The episode appears on
-**crmscoring.com/podcast/** and in the podcast feeds, and you get 9:16 reels
-with captions for Instagram, TikTok and YouTube Shorts.
+Record an episode (or let an AI voice read it), run three commands, push.
+The episode appears in the podcast apps through its feed, and you get 9:16
+reels with captions for Instagram, TikTok and YouTube Shorts. There's no
+podcast page on the website: the feed files are hosted there, unlinked.
 
 There are three shows, one per language, because podcast apps expect one
 language per feed:
@@ -128,12 +129,12 @@ uses another picture.
 
 ```bash
 .venv/bin/python podcast_pipeline/publish_feed.py
-git add docs/podcast podcast_pipeline docs/sitemap.xml && git commit -m "Podcast: episode 1" && git push
+git add docs/podcast podcast_pipeline && git commit -m "Podcast: episode 1" && git push
 ```
 
-This writes the /podcast page, the feeds, the show notes (Markdown, in
-`docs/podcast/notes/` and next to each `episode.json`), copies the audio and
-transcripts into `docs/podcast/`, and GitHub Pages puts it live in a minute.
+This writes the feeds and the show notes (Markdown, in `docs/podcast/notes/`
+and next to each `episode.json`), copies the audio and transcripts into
+`docs/podcast/`, and GitHub Pages serves them a minute after the push.
 
 ## 5. Get listed (once per language)
 

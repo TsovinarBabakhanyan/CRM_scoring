@@ -1,12 +1,11 @@
-"""Step 3: show notes, RSS feeds and the crmscoring.com/podcast/ page.
+"""Step 3: show notes and RSS feeds.
 
     python podcast_pipeline/publish_feed.py
 
-Reads every podcast_pipeline/episodes/*/episode.json and writes into docs/
-(the website, published by GitHub Pages):
+Reads every podcast_pipeline/episodes/*/episode.json and writes the files
+podcast apps read into docs/podcast/ (hosted by GitHub Pages, but not linked
+from the website -- there's no podcast page on the site):
 
-    docs/podcast/index.html            the /podcast page: every episode with a player,
-                                       show notes and a way into lead scoring
     docs/podcast/rss.xml               English feed  -> submit to Apple Podcasts / Spotify
     docs/podcast/ru/rss.xml            Russian feed
     docs/podcast/hy/rss.xml            Armenian feed
@@ -34,7 +33,7 @@ from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import EPISODES, LANGUAGES, ROOT, SITE, SITE_PODCAST, clock, settings  # noqa: E402
+from common import EPISODES, LANGUAGES, ROOT, SITE_PODCAST, settings  # noqa: E402
 
 NS = {
     "itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd",
@@ -162,7 +161,7 @@ def build_feed(cfg: dict, lang: str, episodes: list[dict], now: dt.datetime) -> 
     rss = ET.Element("rss", {"version": "2.0"})
     channel = sub(rss, "channel")
     sub(channel, "title", show["title"])
-    sub(channel, "link", site_url(cfg, f"podcast/#{lang}"))
+    sub(channel, "link", site_url(cfg, f"?lang={lang}"))
     sub(channel, "language", lang)
     sub(channel, "description", show["description"])
     sub(channel, "copyright", f"© {now.year} {cfg['author']}")
@@ -178,7 +177,7 @@ def build_feed(cfg: dict, lang: str, episodes: list[dict], now: dt.datetime) -> 
     image = sub(channel, "image")
     sub(image, "url", site_url(cfg, "podcast/cover.png"))
     sub(image, "title", show["title"])
-    sub(image, "link", site_url(cfg, f"podcast/#{lang}"))
+    sub(image, "link", site_url(cfg, f"?lang={lang}"))
     category = sub(channel, "itunes:category", attrs={"text": cfg["category"]})
     sub(category, "itunes:category", attrs={"text": cfg["subcategory"]})
     sub(channel, "itunes:explicit", "true" if cfg.get("explicit") else "false")
@@ -191,7 +190,7 @@ def build_feed(cfg: dict, lang: str, episodes: list[dict], now: dt.datetime) -> 
         notes = show_notes_html(cfg, episode)
         sub(item, "description", notes)
         sub(item, "content:encoded", notes)
-        sub(item, "link", site_url(cfg, f"podcast/#{episode['slug']}"))
+        sub(item, "link", site_url(cfg, f"?lang={episode['lang']}"))
         sub(item, "guid", site_url(cfg, f"podcast/audio/{episode['audio']}"), isPermaLink="false")
         published = dt.datetime.combine(dt.date.fromisoformat(episode["date"]), dt.time(9, 0), YEREVAN)
         sub(item, "pubDate", format_datetime(published))
@@ -206,116 +205,6 @@ def build_feed(cfg: dict, lang: str, episodes: list[dict], now: dt.datetime) -> 
                 type="application/x-subrip", language=episode["lang"])
     ET.indent(rss, space="  ")
     return b'<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(rss, encoding="utf-8")
-
-
-PAGE_STYLE = """
-  :root { --bg:#f6f1e6; --bg-alt:#fffcf5; --text-h:#211b12; --text:#6b6152; --text-muted:#8a7e6d; --border:#e6dbc3; --accent:#b3401f; --hot:#c53a2c; --warm:#a8710f; --cold:#5b6472; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#18130c; --bg-alt:#211a11; --text-h:#f4ead9; --text:#b6a993; --text-muted:#8d8069; --border:#382d1e; --accent:#e37a4c; --hot:#ea6a53; --warm:#dba43b; --cold:#8b93a3; } }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family:"IBM Plex Sans", system-ui, sans-serif; background:var(--bg); color:var(--text); line-height:1.65; }
-  h1, h2, h3 { font-family:"Fraunces", ui-serif, Georgia, serif; color:var(--text-h); line-height:1.25; }
-  h1 { font-size:2rem; margin:8px 0 6px; } h2 { font-size:1.35rem; margin:40px 0 12px; } h3 { font-size:1.15rem; margin:0 0 4px; }
-  a { color:var(--accent); }
-  .wrap { max-width:760px; margin:0 auto; padding:0 24px; }
-  header.nav { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 0; flex-wrap:wrap; }
-  .logo { display:flex; align-items:center; gap:8px; text-decoration:none; }
-  .logo-dots { display:flex; gap:3px; } .logo-dots span { width:7px; height:7px; border-radius:999px; display:block; }
-  .logo-dots span:nth-child(1){background:var(--hot)} .logo-dots span:nth-child(2){background:var(--warm)} .logo-dots span:nth-child(3){background:var(--cold)}
-  .logo-word { font-family:"Fraunces", ui-serif, Georgia, serif; font-weight:600; font-size:1.15rem; color:var(--text-h); }
-  .logo-word em { font-style:normal; color:var(--accent); }
-  .langs a { margin-left:12px; color:var(--text-muted); font-size:0.9rem; }
-  .intro { display:flex; gap:20px; align-items:center; margin:8px 0 8px; }
-  .intro img { width:120px; height:120px; border-radius:14px; flex-shrink:0; }
-  .episode { background:var(--bg-alt); border:1px solid var(--border); border-radius:12px; padding:20px; margin:16px 0; }
-  .episode .meta { font-size:0.85rem; color:var(--text-muted); margin:0 0 10px; }
-  .episode audio { width:100%; margin:6px 0 10px; }
-  .episode ul { padding-left:20px; }
-  .feed { font-size:0.9rem; }
-  .cta-box { border:1px solid var(--accent); border-radius:12px; padding:18px 20px; margin:28px 0; }
-  .cta { display:inline-block; background:var(--accent); color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin:6px 12px 0 0; }
-  footer { border-top:1px solid var(--border); padding:24px 0 40px; font-size:0.9rem; color:var(--text-muted); }
-"""
-
-
-def build_page(cfg: dict, by_lang: dict[str, list[dict]]) -> str:
-    e = html.escape
-    sections = []
-    for lang in LANGUAGES:
-        t = TEXT[lang]
-        show = cfg["shows"][lang]
-        try_url, template_url = cta_links(cfg, lang)
-        episodes = by_lang.get(lang, [])
-        cards = []
-        for ep in episodes:
-            day = dt.date.fromisoformat(ep["date"]).isoformat()
-            transcript = (
-                f' · <a href="transcripts/{e(ep["transcript"])}">{e(t["transcript"])}</a>' if ep.get("transcript") else ""
-            )
-            cards.append(
-                f'<article class="episode" id="{e(ep["slug"])}">'
-                f"<h3>{e(ep['title'])}</h3>"
-                f'<p class="meta">{day} · {clock(ep["duration"])}{transcript}</p>'
-                f'<audio controls preload="none" src="audio/{e(ep["audio"])}"></audio>'
-                f"{show_notes_html(cfg, ep)}</article>"
-            )
-        feed = (
-            f'<p class="feed"><a href="{e(site_url(cfg, feed_path(lang)))}">{e(t["subscribe"])}</a></p>' if episodes else ""
-        )
-        sections.append(
-            f'<section id="{lang}" lang="{lang}"><h2>{e(show["title"])}</h2>'
-            f"<p>{e(show['description'])}</p>{feed}"
-            + ("".join(cards) or f"<p><em>{e(t['soon'])}</em></p>")
-            + f'<div class="cta-box"><h3>{e(t["cta_title"])}</h3><p>{e(t["cta"])}</p>'
-            f'<a class="cta" href="{e(try_url)}">{e(t["cta_button"])}</a>'
-            f'<a href="{e(template_url)}">{e(t["template"])}</a></div></section>'
-        )
-    langs = " ".join(f'<a href="#{lang}">{e(TEXT[lang]["tab"])}</a>' for lang in LANGUAGES)
-    feeds = "".join(
-        f'<link rel="alternate" type="application/rss+xml" title="{e(cfg["shows"][lang]["title"])}" '
-        f'href="{e(site_url(cfg, feed_path(lang)))}" />'
-        for lang in LANGUAGES if by_lang.get(lang)
-    )
-    title = cfg["shows"]["en"]["title"]
-    description = cfg["shows"]["en"]["description"]
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>{e(title)} — CRM Scoring</title>
-<meta name="description" content="{e(description)}" />
-<link rel="canonical" href="{e(site_url(cfg, 'podcast/'))}" />
-<meta property="og:type" content="website" />
-<meta property="og:site_name" content="CRM Scoring" />
-<meta property="og:url" content="{e(site_url(cfg, 'podcast/'))}" />
-<meta property="og:title" content="{e(title)}" />
-<meta property="og:description" content="{e(description)}" />
-<meta property="og:image" content="{e(site_url(cfg, 'podcast/cover.png'))}" />
-{feeds}
-<link rel="icon" href="../assets/app-icon.png" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet" />
-<style>{PAGE_STYLE}</style>
-</head>
-<body>
-<div class="wrap">
-  <header class="nav">
-    <a class="logo" href="../"><span class="logo-dots"><span></span><span></span><span></span></span><span class="logo-word">CRM <em>Scoring</em></span></a>
-    <nav class="langs">{langs}</nav>
-  </header>
-  <main>
-    <div class="intro">
-      <img src="cover.png" alt="" width="120" height="120" />
-      <div><h1>{e(title)}</h1><p>{e(description)}</p></div>
-    </div>
-    {"".join(sections)}
-  </main>
-  <footer>&copy; {dt.date.today().year} CRM Scoring · <a href="mailto:{e(cfg['email'])}">{e(cfg['email'])}</a> · <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></footer>
-</div>
-</body>
-</html>
-"""
 
 
 def make_cover(path: Path) -> None:
@@ -346,22 +235,13 @@ def make_cover(path: Path) -> None:
     img.save(path, optimize=True)
 
 
-def add_to_sitemap(cfg: dict) -> None:
-    sitemap = SITE / "sitemap.xml"
-    if not sitemap.exists():
-        return
-    text = sitemap.read_text(encoding="utf-8")
-    loc = site_url(cfg, "podcast/")
-    if loc not in text:
-        text = text.replace("</urlset>", f"  <url><loc>{loc}</loc></url>\n</urlset>")
-        sitemap.write_text(text, encoding="utf-8")
-
-
 def publish(today: dt.date | None = None, out: Path = SITE_PODCAST) -> dict[str, list[dict]]:
     cfg = settings()
     today = today or dt.datetime.now(YEREVAN).date()
     now = dt.datetime.now(YEREVAN).replace(microsecond=0)
     episodes = load_episodes(today)
+    if not episodes:
+        return {}
     out.mkdir(parents=True, exist_ok=True)
     for folder in ("audio", "transcripts", "notes"):
         (out / folder).mkdir(exist_ok=True)
@@ -394,9 +274,6 @@ def publish(today: dt.date | None = None, out: Path = SITE_PODCAST) -> dict[str,
         target = out.parent / feed_path(lang)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(build_feed(cfg, lang, eps, now))
-    (out / "index.html").write_text(build_page(cfg, by_lang), encoding="utf-8")
-    if out == SITE_PODCAST:
-        add_to_sitemap(cfg)
     return by_lang
 
 
@@ -407,7 +284,7 @@ def main(argv: list[str] | None = None) -> None:
     by_lang = publish(dt.date.fromisoformat(args.today) if args.today else None)
     for lang in LANGUAGES:
         print(f"{lang}: {len(by_lang.get(lang, []))} episode(s)")
-    print("Wrote docs/podcast/. Commit and push to put it on crmscoring.com/podcast/")
+    print("Wrote the feeds to docs/podcast/. Commit and push to publish them.")
 
 
 if __name__ == "__main__":

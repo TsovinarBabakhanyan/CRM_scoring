@@ -131,10 +131,7 @@ def test_publish_writes_valid_feeds_per_language(site):
     notes = (out / "notes" / "ep01.md").read_text(encoding="utf-8")
     assert "- 0:00 — Intro" in notes and "[Template](" in notes and "Try it free" in notes
 
-    page = (out / "index.html").read_text(encoding="utf-8")
-    assert 'id="ep01"' in page and 'id="ep02"' in page and "ep03" not in page
-    assert "12:34" in page
-    assert "Первый выпуск скоро" in page  # no Russian episode yet
+    assert not (out / "index.html").exists()  # no podcast page on the website
 
 
 def test_publish_finds_audio_already_on_the_site(site):
@@ -180,3 +177,9 @@ def test_ai_voice_is_disclosed_in_show_notes():
     ep = {"title": "T", "lang": "hy", "summary": "S", "ai_voice": True}
     assert "արհեստական բանականության ձայնը" in publish_feed.show_notes_md(cfg, ep)
     assert "<em>" in publish_feed.show_notes_html(cfg, ep)
+
+
+def test_publish_with_no_episodes_writes_nothing(site):
+    out, _add = site
+    assert publish_feed.publish(dt.date(2026, 11, 26), out) == {}
+    assert not out.exists()
