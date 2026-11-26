@@ -98,7 +98,7 @@ def site(tmp_path, monkeypatch):
                    "audio": f"{slug}.mp3", "srt": f"{slug}.srt", "transcript": None, **extra}
         (folder / "episode.json").write_text(json.dumps(episode), encoding="utf-8")
 
-    return tmp_path / "docs" / "podcast", add
+    return tmp_path / "public", add
 
 
 def test_publish_writes_valid_feeds_per_language(site):

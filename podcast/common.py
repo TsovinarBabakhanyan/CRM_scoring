@@ -7,12 +7,13 @@ import shutil
 import subprocess
 from pathlib import Path
 
+# Everything lives inside this folder, so it can be moved out of the
+# CRM Scoring project and used on its own.
 ROOT = Path(__file__).resolve().parent
-REPO = ROOT.parent
 EPISODES = ROOT / "episodes"
+RAW = ROOT / "raw"
+PUBLIC = ROOT / "public"  # what gets uploaded to the podcast host (see README)
 SETTINGS_FILE = ROOT / "podcast.json"
-SITE = REPO / "docs"
-SITE_PODCAST = SITE / "podcast"
 
 LANGUAGES = ("en", "ru", "hy")
 

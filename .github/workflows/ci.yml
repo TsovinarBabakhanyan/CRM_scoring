@@ -41,4 +41,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pytest
-      - run: pytest -q podcast_pipeline/tests
+      - run: pytest -q podcast/tests

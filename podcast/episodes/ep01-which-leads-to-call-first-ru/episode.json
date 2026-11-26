@@ -1,0 +1,53 @@
+{
+  "slug": "ep01-which-leads-to-call-first-ru",
+  "title": "Кому звонить первым?",
+  "lang": "ru",
+  "date": "2026-11-26",
+  "summary": "Лидов много, а времени мало: кому звонить первым? Простой способ оценить каждого лида по соответствию и интересу, разделить на горячих, тёплых и холодных, и таблица на 100 баллов, с которой можно начать завтра. Плюс три ошибки, из-за которых менеджеры перестают доверять оценке.",
+  "chapters": [
+    {
+      "time": "0:00",
+      "title": "Лидов много, времени мало"
+    },
+    {
+      "time": "0:43",
+      "title": "Соответствие и интерес"
+    },
+    {
+      "time": "1:31",
+      "title": "Горячие, тёплые и холодные"
+    },
+    {
+      "time": "2:04",
+      "title": "Таблица на 100 баллов"
+    },
+    {
+      "time": "2:51",
+      "title": "Три ошибки"
+    },
+    {
+      "time": "3:25",
+      "title": "Почему важно объяснять оценку"
+    }
+  ],
+  "links": [
+    {
+      "title": "Бесплатный шаблон скоринга лидов",
+      "url": "https://www.crmscoring.com/ru/lead-scoring-template.html"
+    },
+    {
+      "title": "ИИ-скоринг лидов с объяснением",
+      "url": "https://www.crmscoring.com/ru/ai-lead-scoring.html"
+    }
+  ],
+  "reel": {
+    "start": 124.31,
+    "end": 170.68
+  },
+  "ai_voice": true,
+  "duration": 257.63,
+  "bytes": 3092420,
+  "audio": "ep01-which-leads-to-call-first-ru.mp3",
+  "srt": "ep01-which-leads-to-call-first-ru.srt",
+  "transcript": "ep01-which-leads-to-call-first-ru.txt"
+}

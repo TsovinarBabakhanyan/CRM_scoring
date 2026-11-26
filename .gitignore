@@ -13,8 +13,3 @@ licensing/issued_licenses.jsonl
 
 # Xcode per-user state
 xcuserdata/
-
-# Podcast: big media stays local; the published MP3 lives in docs/podcast/audio/
-podcast_pipeline/episodes/*/*.mp3
-podcast_pipeline/episodes/*/reels/
-podcast_pipeline/raw/

@@ -1,12 +1,12 @@
 """Step 2: a 9:16 reel (1080x1920) from part of an episode, with captions burned in.
 
     # from a video recording of the episode
-    python podcast_pipeline/make_reel.py ep01-what-is-lead-scoring --video episode.mp4 --start 1:05 --end 1:50
+    python make_reel.py ep01-what-is-lead-scoring --video episode.mp4 --start 1:05 --end 1:50
 
     # audio-only episode: the episode's MP3 over a still image (default: the show cover)
-    python podcast_pipeline/make_reel.py ep01-what-is-lead-scoring --start 65 --end 110
+    python make_reel.py ep01-what-is-lead-scoring --start 65 --end 110
 
-Writes podcast_pipeline/episodes/<slug>/reels/<slug>-<start>-<end>.mp4, ready for
+Writes episodes/<slug>/reels/<slug>-<start>-<end>.mp4, ready for
 Instagram Reels, TikTok and YouTube Shorts.
 
 A video is scaled to fill 1080x1920 and the middle is cropped out (use
@@ -125,7 +125,7 @@ def build_filter(base: str, caption_count: int, captions: list[dict], y: int) ->
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("slug", help="episode id (folder in podcast_pipeline/episodes)")
+    parser.add_argument("slug", help="episode id (folder in episodes)")
     parser.add_argument("--start", help="clip start, e.g. 65 or 1:05 (default: the script's ✂️ part)")
     parser.add_argument("--end", help="clip end, e.g. 110 or 1:50")
     parser.add_argument("--video", type=Path, help="video recording of the episode (default: audio over --image)")

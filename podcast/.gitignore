@@ -1,0 +1,10 @@
+# Secrets and local tools
+.env
+.venv/
+__pycache__/
+
+# Big media stays on your computer; public/ is what you upload
+raw/
+episodes/*/*.mp3
+episodes/*/reels/
+public/

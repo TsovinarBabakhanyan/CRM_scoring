@@ -1,18 +1,18 @@
 """Step 3: show notes and RSS feeds.
 
-    python podcast_pipeline/publish_feed.py
+    python publish_feed.py
 
-Reads every podcast_pipeline/episodes/*/episode.json and writes the files
-podcast apps read into docs/podcast/ (hosted by GitHub Pages, but not linked
-from the website -- there's no podcast page on the site):
+Reads every episodes/*/episode.json and writes public/ -- the files podcast
+apps read. Upload public/ as it is to the address in podcast.json's
+"feed_url" (see README):
 
-    docs/podcast/rss.xml               English feed  -> submit to Apple Podcasts / Spotify
-    docs/podcast/ru/rss.xml            Russian feed
-    docs/podcast/hy/rss.xml            Armenian feed
-    docs/podcast/audio/<slug>.mp3      the episode audio
-    docs/podcast/transcripts/<slug>.*  .srt and .txt transcripts
-    docs/podcast/notes/<slug>.md       show notes in Markdown (also next to episode.json)
-    docs/podcast/cover.png             3000x3000 show cover (made once if missing)
+    public/rss.xml               English feed  -> submit to Apple Podcasts / Spotify
+    public/ru/rss.xml            Russian feed
+    public/hy/rss.xml            Armenian feed
+    public/audio/<slug>.mp3      the episode audio
+    public/transcripts/<slug>.*  .srt and .txt transcripts
+    public/notes/<slug>.md       show notes in Markdown (also next to episode.json)
+    public/cover.png             3000x3000 show cover (made once if missing)
 
 Each language is its own show, because podcast apps expect one language per
 feed. An episode dated in the future stays out until that day, so you can
@@ -33,7 +33,7 @@ from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import EPISODES, LANGUAGES, ROOT, SITE_PODCAST, settings  # noqa: E402
+from common import EPISODES, LANGUAGES, PUBLIC, ROOT, settings  # noqa: E402
 
 NS = {
     "itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd",
@@ -81,6 +81,11 @@ def site_url(cfg: dict, path: str) -> str:
     return cfg["site"].rstrip("/") + "/" + path.lstrip("/")
 
 
+def media_url(cfg: dict, path: str) -> str:
+    """Address of a file in public/ once it's uploaded to feed_url."""
+    return cfg["feed_url"].rstrip("/") + "/" + path.lstrip("/")
+
+
 def cta_links(cfg: dict, lang: str) -> tuple[str, str]:
     return (site_url(cfg, f"?lang={lang}#pricing"), site_url(cfg, f"{lang}/lead-scoring-template.html"))
 
@@ -117,7 +122,7 @@ def show_notes_md(cfg: dict, episode: dict) -> str:
         "",
     ]
     if episode.get("transcript"):
-        lines += [f"[{t['transcript']}]({site_url(cfg, 'podcast/transcripts/' + episode['transcript'])})", ""]
+        lines += [f"[{t['transcript']}]({media_url(cfg, 'transcripts/' + episode['transcript'])})", ""]
     return "\n".join(lines)
 
 
@@ -153,7 +158,7 @@ def sub(parent: ET.Element, tag: str, text: str | None = None, attrs: dict | Non
 
 
 def feed_path(lang: str) -> str:
-    return "podcast/rss.xml" if lang == "en" else f"podcast/{lang}/rss.xml"
+    return "rss.xml" if lang == "en" else f"{lang}/rss.xml"
 
 
 def build_feed(cfg: dict, lang: str, episodes: list[dict], now: dt.datetime) -> bytes:
@@ -166,16 +171,16 @@ def build_feed(cfg: dict, lang: str, episodes: list[dict], now: dt.datetime) -> 
     sub(channel, "description", show["description"])
     sub(channel, "copyright", f"© {now.year} {cfg['author']}")
     sub(channel, "lastBuildDate", format_datetime(now))
-    sub(channel, "generator", "CRM Scoring podcast_pipeline")
-    sub(channel, "atom:link", href=site_url(cfg, feed_path(lang)), rel="self", type="application/rss+xml")
+    sub(channel, "generator", "CRM Scoring podcast tools")
+    sub(channel, "atom:link", href=media_url(cfg, feed_path(lang)), rel="self", type="application/rss+xml")
     sub(channel, "itunes:author", cfg["author"])
     sub(channel, "itunes:summary", show["description"])
     owner = sub(channel, "itunes:owner")
     sub(owner, "itunes:name", cfg["author"])
     sub(owner, "itunes:email", cfg["email"])
-    sub(channel, "itunes:image", href=site_url(cfg, "podcast/cover.png"))
+    sub(channel, "itunes:image", href=media_url(cfg, "cover.png"))
     image = sub(channel, "image")
-    sub(image, "url", site_url(cfg, "podcast/cover.png"))
+    sub(image, "url", media_url(cfg, "cover.png"))
     sub(image, "title", show["title"])
     sub(image, "link", site_url(cfg, f"?lang={lang}"))
     category = sub(channel, "itunes:category", attrs={"text": cfg["category"]})
@@ -191,17 +196,17 @@ def build_feed(cfg: dict, lang: str, episodes: list[dict], now: dt.datetime) -> 
         sub(item, "description", notes)
         sub(item, "content:encoded", notes)
         sub(item, "link", site_url(cfg, f"?lang={episode['lang']}"))
-        sub(item, "guid", site_url(cfg, f"podcast/audio/{episode['audio']}"), isPermaLink="false")
+        sub(item, "guid", media_url(cfg, f"audio/{episode['audio']}"), isPermaLink="false")
         published = dt.datetime.combine(dt.date.fromisoformat(episode["date"]), dt.time(9, 0), YEREVAN)
         sub(item, "pubDate", format_datetime(published))
-        sub(item, "enclosure", url=site_url(cfg, f"podcast/audio/{episode['audio']}"),
+        sub(item, "enclosure", url=media_url(cfg, f"audio/{episode['audio']}"),
             length=str(episode["bytes"]), type="audio/mpeg")
         sub(item, "itunes:duration", str(int(round(episode["duration"]))))
         sub(item, "itunes:summary", episode.get("summary", ""))
         sub(item, "itunes:explicit", "true" if cfg.get("explicit") else "false")
         sub(item, "itunes:episodeType", "full")
         if episode.get("srt"):
-            sub(item, "podcast:transcript", url=site_url(cfg, f"podcast/transcripts/{episode['srt']}"),
+            sub(item, "podcast:transcript", url=media_url(cfg, f"transcripts/{episode['srt']}"),
                 type="application/x-subrip", language=episode["lang"])
     ET.indent(rss, space="  ")
     return b'<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(rss, encoding="utf-8")
@@ -235,7 +240,7 @@ def make_cover(path: Path) -> None:
     img.save(path, optimize=True)
 
 
-def publish(today: dt.date | None = None, out: Path = SITE_PODCAST) -> dict[str, list[dict]]:
+def publish(today: dt.date | None = None, out: Path = PUBLIC) -> dict[str, list[dict]]:
     cfg = settings()
     today = today or dt.datetime.now(YEREVAN).date()
     now = dt.datetime.now(YEREVAN).replace(microsecond=0)
@@ -258,7 +263,7 @@ def publish(today: dt.date | None = None, out: Path = SITE_PODCAST) -> dict[str,
         by_lang.setdefault(ep["lang"], []).append(ep)
         src = ep["_dir"]
         # The MP3 isn't kept in git next to episode.json (it's already in
-        # docs/podcast/audio once published), so either place will do.
+        # public/audio once published), so either place will do.
         if (src / ep["audio"]).exists():
             shutil.copyfile(src / ep["audio"], out / "audio" / ep["audio"])
         elif not (out / "audio" / ep["audio"]).exists():
@@ -271,7 +276,7 @@ def publish(today: dt.date | None = None, out: Path = SITE_PODCAST) -> dict[str,
         (out / "notes" / f"{ep['slug']}.md").write_text(notes, encoding="utf-8")
 
     for lang, eps in by_lang.items():
-        target = out.parent / feed_path(lang)
+        target = out / feed_path(lang)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(build_feed(cfg, lang, eps, now))
     return by_lang
@@ -284,7 +289,7 @@ def main(argv: list[str] | None = None) -> None:
     by_lang = publish(dt.date.fromisoformat(args.today) if args.today else None)
     for lang in LANGUAGES:
         print(f"{lang}: {len(by_lang.get(lang, []))} episode(s)")
-    print("Wrote the feeds to docs/podcast/. Commit and push to publish them.")
+    print(f"Wrote {PUBLIC}. Upload that folder as it is to {settings()['feed_url']}")
 
 
 if __name__ == "__main__":

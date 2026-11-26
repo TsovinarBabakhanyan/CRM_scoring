@@ -1,8 +1,8 @@
 """Step 0 (instead of recording): read a script aloud with an AI voice.
 
-    python podcast_pipeline/make_voice.py podcast_pipeline/scripts/ep01-which-leads-to-call-first.hy.md
+    python make_voice.py scripts/ep01-which-leads-to-call-first.hy.md
 
-Turns a script from podcast_pipeline/scripts/ into podcast_pipeline/raw/<slug>.mp3
+Turns a script from scripts/ into raw/<slug>.mp3
 with Microsoft Azure AI Speech, which has natural voices in English, Russian
 and Armenian. Then run process_episode.py on that file as if you'd recorded it
 (the command is printed at the end).
@@ -12,7 +12,7 @@ and slug from the script's header. The part between the two ✂️ lines is
 timed, and process_episode.py / make_reel.py use it as the reel by default.
 
 Needs an Azure Speech key (free tier: 500,000 characters a month) in the
-environment or in the repo's .env:
+environment or in this folder's .env:
 
     AZURE_SPEECH_KEY=...
     AZURE_SPEECH_REGION=westeurope
@@ -34,9 +34,8 @@ from html import escape
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import LANGUAGES, REPO, ROOT, probe_duration, require, run  # noqa: E402
+from common import LANGUAGES, RAW, ROOT, probe_duration, require, run  # noqa: E402
 
-RAW = ROOT / "raw"
 # Azure neural voices: (female, male) per language.
 VOICES = {
     "en": ("en-US-AvaMultilingualNeural", "en-US-AndrewMultilingualNeural"),
@@ -84,8 +83,8 @@ def parse_script(text: str) -> dict:
 
 
 def load_env() -> None:
-    """Fills AZURE_* from the repo's .env if they aren't set already."""
-    env = REPO / ".env"
+    """Fills AZURE_* from this folder's .env if they aren't set already."""
+    env = ROOT / ".env"
     if env.exists():
         for line in env.read_text(encoding="utf-8").splitlines():
             key, _, value = line.partition("=")
@@ -105,7 +104,7 @@ def azure_speak(text: str, lang: str, voice: str, rate: str, out: Path) -> None:
 
     key, region = os.environ.get("AZURE_SPEECH_KEY"), os.environ.get("AZURE_SPEECH_REGION")
     if not (key and region):
-        raise SystemExit("Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION (see podcast_pipeline/README.md), "
+        raise SystemExit("Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION (see README.md), "
                          "or use --engine say for a Mac preview.")
     resp = requests.post(
         f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1",
@@ -138,7 +137,7 @@ def silence(out: Path, seconds: float) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("script", type=Path, help="a script from podcast_pipeline/scripts/")
+    parser.add_argument("script", type=Path, help="a script from scripts/")
     parser.add_argument("--lang", choices=LANGUAGES, help="default: from the file name (.en.md, .ru.md, .hy.md)")
     parser.add_argument("--voice", default="female",
                         help="female, male, or an exact Azure voice name (e.g. hy-AM-HaykNeural)")
@@ -189,8 +188,8 @@ def main(argv: list[str] | None = None) -> None:
     print(f"\nVoice track: {out} ({elapsed:.0f}s)")
     if "reel" in sidecar:
         print(f"Reel window: {sidecar['reel']['start']:.1f}s – {sidecar['reel']['end']:.1f}s")
-    print("Next:\n  .venv/bin/python podcast_pipeline/process_episode.py "
-          f"{out.relative_to(REPO)} --lang {lang}{model} --slug {slug} --title {json.dumps(script['title'], ensure_ascii=False)}")
+    print("Next:\n  python process_episode.py "
+          f"{out.relative_to(ROOT)} --lang {lang}{model} --slug {slug} --title {json.dumps(script['title'], ensure_ascii=False)}")
 
 
 if __name__ == "__main__":

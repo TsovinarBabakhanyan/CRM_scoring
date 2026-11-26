@@ -1,9 +1,9 @@
 """Step 1: a raw recording -> a loudness-normalised MP3 and its transcripts.
 
-    python podcast_pipeline/process_episode.py recording.m4a \
+    python process_episode.py recording.m4a \
         --slug ep01-what-is-lead-scoring --title "What is lead scoring?" --lang en
 
-Writes podcast_pipeline/episodes/<slug>/:
+Writes episodes/<slug>/:
     <slug>.mp3          normalised to -16 LUFS (the podcast standard), -1.5 dBTP
     <slug>.srt          subtitles, one cue per spoken phrase
     <slug>.words.json   every word with its start/end time (make_reel.py uses it)
@@ -103,7 +103,7 @@ def transcribe(source: Path, language: str, model_size: str) -> tuple[list[dict]
     try:
         from faster_whisper import WhisperModel
     except ImportError:
-        raise SystemExit("faster-whisper isn't installed: pip install -r podcast_pipeline/requirements.txt")
+        raise SystemExit("faster-whisper isn't installed: pip install -r requirements.txt")
     model = WhisperModel(model_size, device="auto", compute_type="int8")
     raw_segments, _info = model.transcribe(
         decode_16k(source), language=language, word_timestamps=True, vad_filter=True, beam_size=5
