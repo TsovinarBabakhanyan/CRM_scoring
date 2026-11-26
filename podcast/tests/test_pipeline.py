@@ -195,3 +195,14 @@ def test_align_script_uses_the_exact_words_in_order():
     assert cues[0]["start"] == 0.0 and cues[1]["end"] == pytest.approx(4.0)
     assert ws[5]["start"] == pytest.approx(4.6) and ws[-1]["end"] == pytest.approx(6.0)
     assert all(a["end"] <= b["start"] + 1e-6 for a, b in zip(ws, ws[1:]))
+
+
+def test_motion_reel_graph_has_product_shot_wave_captions_and_end_card():
+    layout = {"shot_x": 40, "shot_y": 500, "wave_x": 90, "wave_y": 1300, "caption_y": 1500}
+    graph, last = make_reel.build_filter("", 1, [{"start": 0, "end": 1}], 1500,
+                                         first_input=4, head=make_reel.motion_head(layout, 30))
+    graph, last = make_reel.add_end_card(graph, last, 30)
+    assert last == "final"
+    assert "zoompan" in graph and "showwaves" in graph
+    assert "[v0][4:v]overlay=x=0:y=1500" in graph
+    assert "enable='gte(t,26.50)'" in graph

@@ -24,6 +24,7 @@ From a script (read by an AI voice, or by you), three commands give you:
 | `podcast.json` | show names, descriptions, email, where `public/` is hosted |
 | `.env` | your Azure key (private, never uploaded) |
 | `cover.png` | 3000x3000 show cover |
+| `assets/` | pictures used in reels (the dashboard) |
 
 ## One-time setup
 
@@ -84,7 +85,16 @@ that day. Then open `episodes/<slug>/episode.json` and write a good
 ```
 
 Without `--start`/`--end` it uses the script's ✂️ part. The reel is saved in
-`episodes/<slug>/reels/`. With your own video: `--video my-video.mp4`.
+`episodes/<slug>/reels/`.
+
+The reel isn't just a voice over a picture: the episode title at the top, the
+CRM Scoring dashboard (`assets/dashboard.png`) slowly zooming and drifting, a
+sound wave that moves with the voice, captions, and a closing card — "Score
+your own leads · Try it free · crmscoring.com" — in the episode's language.
+
+- `--image other-screenshot.png` shows another picture in the middle
+- `--style still` gives the simple version (cover picture + captions)
+- `--video my-video.mp4` uses your own video instead
 
 **4. Feeds:**
 
