@@ -1,0 +1,22 @@
+{
+  "site": "https://www.crmscoring.com",
+  "author": "CRM Scoring",
+  "email": "hello@crmscoring.com",
+  "category": "Business",
+  "subcategory": "Marketing",
+  "explicit": false,
+  "shows": {
+    "en": {
+      "title": "CRM Scoring Podcast",
+      "description": "Short, practical episodes on lead scoring: which leads to call first, how to rank Hot, Warm and Cold, and how to turn a messy CRM export into a list your sales team trusts."
+    },
+    "ru": {
+      "title": "Подкаст CRM Scoring",
+      "description": "Короткие практичные выпуски о скоринге лидов: кому звонить первым, как делить лиды на горячие, тёплые и холодные и как превратить выгрузку из CRM в список, которому доверяет отдел продаж."
+    },
+    "hy": {
+      "title": "CRM Scoring փոդքասթ",
+      "description": "Կարճ և գործնական թողարկումներ լիդերի գնահատման մասին՝ ում զանգել առաջինը, ինչպես բաժանել լիդերը թեժ, տաք և սառը, և ինչպես CRM-ի արտահանումը դարձնել ցուցակ, որին վաճառքի թիմը վստահում է։"
+    }
+  }
+}
