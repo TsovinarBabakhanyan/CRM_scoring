@@ -416,7 +416,7 @@ def render(slug: str, lang: str) -> str:
     <h2>{esc(ui["more"])}</h2>
     <p>{more}</p>
   </main>
-  <footer>&copy; 2026 CRM Scoring · {esc(ui["contact"])} <a href="mailto:hello@crmscoring.com">hello@crmscoring.com</a> · <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></footer>
+  <footer>&copy; 2026 CRM Scoring · {esc(ui["contact"])} <a href="mailto:tsovinar.babakhanyan@hotmail.com">tsovinar.babakhanyan@hotmail.com</a> · <a href="../terms.html">Terms</a> · <a href="../privacy.html">Privacy</a></footer>
 </div>
 </body>
 </html>

@@ -139,7 +139,7 @@ transcripts into `docs/podcast/`, and GitHub Pages puts it live in a minute.
 
 1. **Apple Podcasts:** podcastsconnect.apple.com → **+** → **New Show** → **Add a show with an RSS feed** → paste the feed URL.
 2. **Spotify:** podcasters.spotify.com → **Get started** → **Find an existing podcast** → paste the feed URL.
-3. Both email a code to the feed's email (hello@crmscoring.com) to prove it's yours.
+3. Both email a code to the feed's email (tsovinar.babakhanyan@hotmail.com) to prove it's yours.
 4. **YouTube Music / others:** most apps find the show on Apple's directory by themselves.
 
 ## Episode ideas
